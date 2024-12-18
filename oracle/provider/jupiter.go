@@ -2,7 +2,6 @@ package provider
 
 import (
 	"encoding/base64"
-	"fmt"
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/go-resty/resty/v2"
 	"github.com/holiman/uint256"
@@ -100,8 +99,6 @@ func (o *Jupiter) quote(from string, to string, amount *uint256.Int, slippageBPS
 		"slippageBps":                strconv.FormatInt(int64(slippageBPS), 10),
 		"maxAccounts":                strconv.FormatInt(20, 10),
 	}
-
-	fmt.Println(queryParams)
 
 	var result map[string]interface{}
 	_, err := resty.New().R().

@@ -1,5 +1,4 @@
 {
-  "gringotts": "3xCFDu4wrca8Pxsc6H9Wz8ktKzECdaUPD75H77eLx81F",
   "estimate_discriminator": [
     31,
     203,
@@ -103,8 +102,14 @@
       "is_signer": false
     }
   ],
-  "peers": {
-    "ethereum": "6WFTSduxWeysunQBfL6Pe3ZpgEYDxF2TLAjLH87Lh1gE"
-  },
-  "signer": []
+  "bridge_discriminator": [
+    174,
+    41,
+    120,
+    146,
+    98,
+    218,
+    169,
+    25
+  ]
 }

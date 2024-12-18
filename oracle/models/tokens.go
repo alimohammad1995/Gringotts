@@ -30,7 +30,11 @@ func LoadTokens() error {
 	}
 
 	tokenCount := 0
-	for _, tokenList := range tokens {
+	for chain, tokenList := range tokens {
+		if !chain.IsSupported() {
+			return fmt.Errorf("blockchain %s is not supported", chain)
+		}
+
 		tokenCount += len(tokenList)
 	}
 	log.Info(fmt.Sprintf("Loaded %d tokens", tokenCount))

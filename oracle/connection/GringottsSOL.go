@@ -68,6 +68,6 @@ type BridgeOutboundTransfer struct {
 }
 
 type BridgeRequest struct {
-	InTransfer   BridgeInboundTransfer    `borsh:"inbound"`
-	OutTransfers []BridgeOutboundTransfer `borsh:"outbounds"`
+	Inbound   BridgeInboundTransfer    `borsh:"inbound"`
+	Outbounds []BridgeOutboundTransfer `borsh:"outbounds"`
 }

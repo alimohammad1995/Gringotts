@@ -19,19 +19,16 @@ type Account struct {
 }
 
 type AccountModel struct {
-	PDA                   string                `json:"gringotts"`
-	EstimateDiscriminator []byte                `json:"estimate_discriminator"`
-	EstimateAccounts      []*Account            `json:"estimate_accounts"`
-	BridgeDiscriminator   []byte                `json:"bridge_discriminator"`
-	Peers                 map[Blockchain]string `json:"peers"`
-	PriceFeed             string                `json:"pyth_price_feed"`
-	Signer                []byte                `json:"signer"`
+	EstimateDiscriminator []byte     `json:"estimate_discriminator"`
+	EstimateAccounts      []*Account `json:"estimate_accounts"`
+	BridgeDiscriminator   []byte     `json:"bridge_discriminator"`
+	PriceFeed             string     `json:"pyth_price_feed"`
 }
 
 var accountModel AccountModel
 
 func LoadAccounts() error {
-	content, err := os.ReadFile(viper.GetString("solana_accounts"))
+	content, err := os.ReadFile(viper.GetString("solana"))
 	if err != nil {
 		return err
 	}
@@ -66,8 +63,8 @@ func GetPeer(chain Blockchain, destination Blockchain) string {
 	return GetPDA(chain, [][]byte{[]byte(PeerSeed), utils.ToLittleEndianBytes(destination.GetLzEId())}).String()
 }
 
-func GetSigner() []byte {
-	return accountModel.Signer
+func GetSigner() string {
+	return os.Getenv("SOLANA_SIGNER_SEED")
 }
 
 func GetPDA(chain Blockchain, seeds [][]byte) common.PublicKey {

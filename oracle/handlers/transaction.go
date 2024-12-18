@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/holiman/uint256"
 	"gringotts/config"
 	"gringotts/models"
@@ -53,7 +54,7 @@ func HandleTransaction(c *fiber.Ctx) error {
 	request.SlippageBPS = utils.Max(request.SlippageBPS, config.DefaultSlippageBPS)
 
 	/* Inbound transaction */
-	outAmountUSDX := uint256.NewInt(0)
+	outAmountUSDX := uint64(0)
 
 	var sourceChain models.Blockchain
 	chainInTransactions := make(map[models.Blockchain][]*models.Transaction)
@@ -75,13 +76,11 @@ func HandleTransaction(c *fiber.Ctx) error {
 				request.SlippageBPS,
 			)
 			if inErr != nil {
+				log.Errorw("Inbound error", "err", err)
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid swap request - in"})
 			}
 
-			outAmountUSDX = outAmountUSDX.Add(
-				outAmountUSDX,
-				utils.MoveDecimals(inTransaction.OutAmount, inTransaction.ToToken.Decimals, config.ChainTransferDecimals),
-			)
+			outAmountUSDX = outAmountUSDX + utils.MoveDecimals(inTransaction.OutAmount, inTransaction.ToToken.Decimals, config.ChainTransferDecimals).Uint64()
 
 			inTransaction.SrcAmount = srcAmount
 			inTransactions = append(inTransactions, transform(inTransaction))
@@ -98,13 +97,15 @@ func HandleTransaction(c *fiber.Ctx) error {
 			dstMapping[chain] = append(dstMapping[chain], transaction.Token)
 		}
 	}
-	marketplace, err := service.EstimateMarketplace(sourceChain, dstMapping, outAmountUSDX)
+	marketplace, err := service.EstimateMarketplace(sourceChain, dstMapping, uint256.NewInt(outAmountUSDX))
 	if err != nil {
+		log.Errorw("Estimate error", "err", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
-	outAmountUSDX = outAmountUSDX.Sub(outAmountUSDX, marketplace.GasPriceUSD)
-	outAmountUSDX = outAmountUSDX.Sub(outAmountUSDX, marketplace.CommissionUSD)
+	outAmountUSDX = outAmountUSDX - marketplace.GasPriceUSD.Uint64()
+	outAmountUSDX = outAmountUSDX - marketplace.CommissionUSD.Uint64()
+	outAmountUSDX = uint64(float64(outAmountUSDX) * config.ConversionFactor)
 
 	marketplaceCommission := marketplace.CommissionUSD.Float64() / math.Pow10(config.ChainTransferDecimals)
 	marketplaceGas := marketplace.GasPriceUSD.Float64() / math.Pow10(config.ChainTransferDecimals)
@@ -119,11 +120,12 @@ func HandleTransaction(c *fiber.Ctx) error {
 				chain,
 				transaction.Recipient,
 				transaction.Token,
-				utils.ApplyBPS(outAmountUSDX, transaction.DistributionBPS),
+				utils.ApplyBPS(uint256.NewInt(outAmountUSDX), transaction.DistributionBPS),
 				request.SlippageBPS,
 			)
 
 			if outErr != nil {
+				log.Errorw("Outbound error", "err", outErr)
 				return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid outTransaction request - out"})
 			}
 
@@ -135,13 +137,14 @@ func HandleTransaction(c *fiber.Ctx) error {
 	}
 
 	tx, err := service.CreateBlockchainTransaction(
-		outAmountUSDX.ToBig(),
+		uint256.NewInt(outAmountUSDX).ToBig(),
 		request.User,
 		sourceChain,
 		chainInTransactions,
 		chainOutTransactions,
 	)
 	if err != nil {
+		log.Errorw("create final transaction error", "err", err)
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
 

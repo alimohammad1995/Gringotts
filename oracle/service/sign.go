@@ -7,6 +7,8 @@ import (
 	"github.com/blocto/solana-go-sdk/program/address_lookup_table"
 	"github.com/blocto/solana-go-sdk/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/gofiber/fiber/v2/log"
+	"github.com/holiman/uint256"
 	"github.com/near/borsh-go"
 	"gringotts/connection"
 	"gringotts/models"
@@ -43,9 +45,10 @@ func createSolanaTransaction(
 
 	inboundTransfers := make([]connection.BridgeInboundTransferItem, len(inTransaction))
 	for i, transaction := range inTransaction {
+		tAmount, _ := uint256.FromDecimal(transaction.SrcAmount)
 		inboundTransfer := connection.BridgeInboundTransferItem{
 			Asset:  utils.ToByte32(transaction.FromToken),
-			Amount: transaction.MinOutAmount.Uint64(),
+			Amount: tAmount.Uint64(),
 		}
 
 		if transaction.Swap != nil {
@@ -95,15 +98,14 @@ func createSolanaTransaction(
 	}
 
 	requestSerializedData, _ := borsh.Serialize(connection.BridgeRequest{
-		InTransfer: connection.BridgeInboundTransfer{
+		Inbound: connection.BridgeInboundTransfer{
 			AmountUSDx: amount.Uint64(),
 			Items:      inboundTransfers,
 		},
-		OutTransfers: outboundTransfers,
+		Outbounds: outboundTransfers,
 	})
 	data := append(models.GetBridgeDiscriminator(), requestSerializedData...)
 
-	solanaClient.New()
 	accounts := []types.AccountMeta{
 		{PubKey: solana.PublicKeyFromString(models.GetPriceFeed()), IsSigner: false, IsWritable: false},
 		{PubKey: solana.PublicKeyFromString(models.GetGringotts(blockchain)), IsSigner: false, IsWritable: false},
@@ -126,7 +128,8 @@ func createSolanaTransaction(
 		}
 		addressLookupTable, err := address_lookup_table.DeserializeLookupTable(accountInfo.Data, accountInfo.Owner)
 		if err != nil {
-			return nil, err
+			log.Errorw("invalid alt", "err", err)
+			continue
 		}
 		solanaALTs = append(solanaALTs, types.AddressLookupTableAccount{
 			Key:       solana.PublicKeyFromString(alt),
@@ -160,9 +163,10 @@ func createEVMTransaction(
 
 	inboundTransfers := make([]connection.GringottsBridgeInboundTransferItem, len(inTransaction))
 	for i, transaction := range inTransaction {
+		tAmount, _ := uint256.FromDecimal(transaction.SrcAmount)
 		transactionItem := connection.GringottsBridgeInboundTransferItem{
 			Asset:  utils.ToByte32(transaction.FromToken),
-			Amount: transaction.MinOutAmount.ToBig(),
+			Amount: tAmount.ToBig(),
 		}
 
 		if transaction.Swap != nil {
@@ -214,11 +218,11 @@ func createEVMTransaction(
 	}
 
 	request := connection.GringottsBridgeRequest{
-		InTransfer: connection.GringottsBridgeInboundTransfer{
+		Inbound: connection.GringottsBridgeInboundTransfer{
 			AmountUSDX: amount,
 			Items:      inboundTransfers,
 		},
-		OutTransfers: outboundTransfers,
+		Outbounds: outboundTransfers,
 	}
 
 	parsedABI, _ := abi.JSON(strings.NewReader(connection.GringottsEVMMetaData.ABI))

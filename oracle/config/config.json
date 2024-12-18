@@ -1,5 +1,5 @@
 {
   "blockchains": "./config/blockchains.json",
   "tokens": "./config/tokens.json",
-  "solana_accounts": "./config/solana_accounts.json"
+  "solana": "./config/solana.json"
 }

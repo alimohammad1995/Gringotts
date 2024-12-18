@@ -60,10 +60,11 @@ func (o *OpenOcean) fetchOpenOceanSwap(params *SwapParams) map[string]interface{
 		"inTokenAddress":  from,
 		"outTokenAddress": to,
 		"amount":          strconv.FormatFloat(amount, 'f', -1, 64),
-		"gasPrice":        "1",
+		"gasPrice":        "15",
 		"slippage":        strconv.FormatFloat(float64(params.SlippageBPS)/100, 'f', -1, 64),
 		"sender":          params.Chain.GetContract(),
 		"account":         params.Recipient,
+		"enabledDexIds":   OpenOceanDexMapping[params.Chain],
 	}
 
 	var result map[string]interface{}
@@ -101,4 +102,16 @@ var OpenOceanNativeMapping = map[models.Blockchain]string{
 	models.Arbitrum: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
 	models.Optimism: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
 	models.Aurora:   "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+}
+
+var OpenOceanDexMapping = map[models.Blockchain]string{
+	models.Ethereum: "1,3,4",
+	models.Binance:  "0,1",
+	models.Polygon:  "1,2,15,6,37",
+	models.BASE:     "1,2,3",
+	models.Fantom:   "1,2,3",
+	models.Avax:     "1,40,41",
+	models.Arbitrum: "1,3,4",
+	models.Optimism: "1,2",
+	models.Aurora:   "1,9,10",
 }

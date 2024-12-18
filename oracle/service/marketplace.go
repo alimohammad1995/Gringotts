@@ -28,7 +28,7 @@ func EstimateMarketplace(
 	amount *uint256.Int,
 ) (*provider.Estimate, error) {
 	switch chain {
-	case models.Solana:
+	case models.Solana, models.SolanaDev:
 		return EstimateMarketplaceSolana(chain, dstItems, amount)
 	default:
 		return estimateMarketplaceEVM(chain, dstItems, amount)
@@ -79,7 +79,6 @@ func EstimateMarketplaceSolana(
 			PubKey: solana.PublicKeyFromString(models.GetPeer(chain, chainIter)), IsSigner: false, IsWritable: false,
 		})
 	}
-
 	accounts = append(accounts, getEstimateAccounts()...)
 
 	instruction := types.Instruction{
@@ -91,7 +90,7 @@ func EstimateMarketplaceSolana(
 	client := solana_client.NewClient(chain.GetEndpoint())
 	recentBlockhash, _ := client.GetLatestBlockhash(context.Background())
 
-	signer, _ := types.AccountFromBytes(models.GetSigner())
+	signer, _ := types.AccountFromBase58(models.GetSigner())
 
 	tx, err := types.NewTransaction(types.NewTransactionParam{
 		Message: types.NewMessage(types.NewMessageParam{
@@ -204,7 +203,7 @@ func GetExecutionParams(chain models.Blockchain, asset string) (uint64, uint16, 
 
 	if token.IsStableCoin {
 		switch chain {
-		case models.Solana:
+		case models.Solana, models.SolanaDev:
 			return 100_000, 0, 0
 		default:
 			return 100_000, 0, 0
@@ -212,7 +211,7 @@ func GetExecutionParams(chain models.Blockchain, asset string) (uint64, uint16, 
 	}
 
 	switch chain {
-	case models.Solana:
+	case models.Solana, models.SolanaDev:
 		return 500_000, config.MaxCommandLength, config.MaxMetaDataLength
 	default:
 		return 500_000, config.MaxCommandLength, 0

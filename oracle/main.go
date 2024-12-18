@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/joho/godotenv"
 	"log"
 
 	"gringotts/models"
@@ -36,4 +37,6 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err != nil {
 		panic(fmt.Errorf("fatal error config file: %s", err))
 	}
+
+	godotenv.Load()
 }

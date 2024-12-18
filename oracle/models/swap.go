@@ -17,7 +17,7 @@ type Transaction struct {
 	FromToken string `json:"from_token"`
 	ToToken   string `json:"to_token"`
 
-	SrcAmount string
+	SrcAmount string `json:"src_amount"`
 
 	Recipient       string `json:"recipient"`
 	DistributionBPS int    `json:"distribution_bps"`

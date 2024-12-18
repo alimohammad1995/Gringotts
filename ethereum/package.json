@@ -1,0 +1,23 @@
+{
+  "name": "hardhat-project",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox-viem": "^3.0.0",
+    "hardhat": "^2.22.12"
+  },
+  "dependencies": {
+    "@chainlink/contracts": "^1.2.0",
+    "@layerzerolabs/oapp-evm": "^0.0.4",
+    "@layerzerolabs/oft-evm": "^0.0.11",
+    "@layerzerolabs/test-devtools-evm-hardhat": "^0.3.0",
+    "@openzeppelin/contracts": "^5.0.2",
+    "@pythnetwork/pyth-sdk-solidity": "^4.0.0",
+    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
+    "@uniswap/v3-core": "^1.0.1",
+    "@uniswap/v3-periphery": "^1.4.4",
+    "bs58": "^6.0.0",
+    "dotenv": "^16.4.5",
+    "solidity-bytes-utils": "^0.8.0",
+    "tronweb": "^6.0.0"
+  }
+}

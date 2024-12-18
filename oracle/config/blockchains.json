@@ -1,0 +1,33 @@
+{
+  "ethereum": {
+    "id": 1,
+    "lz_eid": 1,
+    "endpoint": "https://arbitrum-sepolia.infura.io/v3/463ba1f0f1c34f1da7403e6f4e81ebef",
+    "logo": "https://cryptologos.cc/logos/ethereum-eth-logo.png"
+  },
+  "solana": {
+    "id": 2,
+    "lz_eid": 30168,
+    "endpoint": "https://api.mainnet-beta.solana.com",
+    "logo": "https://cryptologos.cc/logos/solana-sol-logo.png"
+  },
+  "_solana": {
+    "id": 3,
+    "lz_eid": 40168,
+    "endpoint": "https://api.devnet.solana.com",
+    "contract": "D4qgtRF5t7MzA5nASfag3ef5Y68xb5hBcp9ac9Wttfkr",
+    "logo": "https://cryptologos.cc/logos/solana-sol-logo.png"
+  },
+  "arbitrum": {
+    "id": 4,
+    "lz_eid": 30110,
+    "endpoint": "https://arbitrum-sepolia.infura.io/v3/463ba1f0f1c34f1da7403e6f4e81ebef",
+    "logo": "https://cryptologos.cc/logos/arbitrum-arb-logo.png"
+  },
+  "_arbitrum": {
+    "id": 5,
+    "lz_eid": 40231,
+    "endpoint": "https://arbitrum-sepolia.infura.io/v3/463ba1f0f1c34f1da7403e6f4e81ebef",
+    "logo": "https://cryptologos.cc/logos/arbitrum-arb-logo.png"
+  }
+}

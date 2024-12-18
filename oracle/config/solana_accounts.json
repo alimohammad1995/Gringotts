@@ -1,0 +1,110 @@
+{
+  "gringotts": "3xCFDu4wrca8Pxsc6H9Wz8ktKzECdaUPD75H77eLx81F",
+  "estimate_discriminator": [
+    31,
+    203,
+    147,
+    20,
+    225,
+    92,
+    58,
+    219
+  ],
+  "pyth_price_feed": "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE",
+  "estimate_accounts": [
+    {
+      "address": "76y77prsiCMvXMjuoZ5VRrhG5qYBrUMYTE5WgHqgjEn6",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "7a4WjyR8VZ7yZz5XJAKm39BUGn5iT9CKcv2pmG9tdXVH",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "5khLfP3hCK93pYuLk2AsWDsiELBBuazY89n3wj3rjqDy",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "9wgwtfS2NbYariF6kFCV4ifj4fVYQ5bNtQ7pj4jWrE2T",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "526PeNZfw8kSnDU4nmzJFVJzJWNhwmZykEyJr5XWz5Fv",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "2uk9pQh3tB5ErV7LGQJcbWjb4KeJ2UJki5qJZ8QG56G3",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "E4oz6M8qwybZs8eZJHcqdJ4BCwq4GB2NhboTi8PpfhsJ",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "2XgGZG4oP29U3w5h4nTk1V2LFHL23zKDPJjs3psGzLKQ",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "26cjnu2oXyw8vA53oajyAduFkMBamuxeU3YJvqBcSj73",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "3y4LwxWFPhMNc4w8P4CfH5WVqwUnAm21PA4Pf7UMoxej",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "6doghB248px58JSSwG4qejQ46kFMW4AMj7vzJnWZHNZn",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "AwrbHeCyniXaQhiJZkLhgWdUCteeWSGaSN1sTfLiY7xK",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "8ahPGPjEbpgGaZx2NV1iG5Shj7TDwvsjkEDcGWjt94TP",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "CSFsUupvJEQQd1F4SsXGACJaxQX4eropQMkGV2696eeQ",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "HtEYV4xB4wvsj5fgTkcfuChYpvGYzgzwvNhgDZQNh7wW",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "4VDjp6XQaxoZf5RGwiPU9NR1EXSZn2TP4ATMmiSzLfhb",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "8ahPGPjEbpgGaZx2NV1iG5Shj7TDwvsjkEDcGWjt94TP",
+      "is_writable": false,
+      "is_signer": false
+    },
+    {
+      "address": "CSFsUupvJEQQd1F4SsXGACJaxQX4eropQMkGV2696eeQ",
+      "is_writable": false,
+      "is_signer": false
+    }
+  ],
+  "peers": {
+    "ethereum": "6WFTSduxWeysunQBfL6Pe3ZpgEYDxF2TLAjLH87Lh1gE"
+  },
+  "signer": []
+}

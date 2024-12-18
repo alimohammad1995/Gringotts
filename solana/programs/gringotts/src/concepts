@@ -1,0 +1,1 @@
+#[derive(InitSpace)]  Counter::INIT_SPACE

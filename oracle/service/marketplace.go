@@ -72,11 +72,11 @@ func EstimateMarketplaceSolana(
 
 	accounts := []types.AccountMeta{
 		{PubKey: solana.PublicKeyFromString(models.GetPriceFeed()), IsSigner: false, IsWritable: false},
-		{PubKey: solana.PublicKeyFromString(models.GetPDA()), IsSigner: false, IsWritable: false},
+		{PubKey: solana.PublicKeyFromString(models.GetGringotts(chain)), IsSigner: false, IsWritable: false},
 	}
 	for chainIter := range dstItems {
 		accounts = append(accounts, types.AccountMeta{
-			PubKey: solana.PublicKeyFromString(models.GetPeer(chainIter)), IsSigner: false, IsWritable: false,
+			PubKey: solana.PublicKeyFromString(models.GetPeer(chain, chainIter)), IsSigner: false, IsWritable: false,
 		})
 	}
 

@@ -15,7 +15,7 @@ type Blockchain string
 type BlockchainModel struct {
 	Chain    Blockchain
 	Id       uint8  `json:"id"`
-	LzEId    int    `json:"lz_eid"`
+	LzEId    uint32 `json:"lz_eid"`
 	Endpoint string `json:"endpoint"`
 	Icon     string `json:"icon"`
 	Contract string `json:"contract"`
@@ -34,8 +34,8 @@ const (
 	Aurora   Blockchain = "aurora"
 	Solana   Blockchain = "solana"
 
-	_Solana   Blockchain = "_solana"
-	_Arbitrum Blockchain = "_arbitrum"
+	SolanaDev   Blockchain = "_solana"
+	ArbitrumDev Blockchain = "_arbitrum"
 )
 
 var allValidBlockchains = []Blockchain{
@@ -51,8 +51,8 @@ var allValidBlockchains = []Blockchain{
 	Aurora,
 	Solana,
 
-	_Solana,
-	_Arbitrum,
+	SolanaDev,
+	ArbitrumDev,
 }
 
 var blockchains = map[Blockchain]*BlockchainModel{}
@@ -67,7 +67,7 @@ func LoadBlockchain() error {
 	}
 
 	idsMap := make(map[uint8]bool)
-	lzEdiMap := make(map[int]bool)
+	lzEdiMap := make(map[uint32]bool)
 	chainsMap := make(map[Blockchain]bool)
 
 	for chain, info := range blockchains {
@@ -102,6 +102,10 @@ func (b Blockchain) GetEndpoint() string {
 
 func (b Blockchain) GetId() uint8 {
 	return blockchains[b].Id
+}
+
+func (b Blockchain) GetLzEId() uint32 {
+	return blockchains[b].LzEId
 }
 
 func (b Blockchain) GetContract() string {

@@ -11,7 +11,7 @@ type SwapParams struct {
 	ToToken     *models.Token
 	Amount      *uint256.Int
 	Recipient   string
-	SlippageBPS models.BPS
+	SlippageBPS int
 }
 
 type Swap struct {
@@ -31,7 +31,7 @@ type Transaction struct {
 	SrcAmount *uint256.Int
 
 	Recipient       string
-	DistributionBPS models.BPS
+	DistributionBPS int
 
 	OutAmount    *uint256.Int
 	MinOutAmount *uint256.Int

@@ -6,7 +6,6 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/go-resty/resty/v2"
 	"github.com/holiman/uint256"
-	"gringotts/models"
 	"gringotts/utils"
 	"strconv"
 )
@@ -85,7 +84,7 @@ func (o *Jupiter) swap(quoteResponse map[string]interface{}, recipient string) m
 	return result
 }
 
-func (o *Jupiter) quote(from string, to string, amount *uint256.Int, slippageBPS models.BPS) map[string]interface{} {
+func (o *Jupiter) quote(from string, to string, amount *uint256.Int, slippageBPS int) map[string]interface{} {
 	if len(from) == 0 {
 		from = SOL
 	}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/holiman/uint256"
+	"gringotts/config"
 	"gringotts/utils"
 	"math"
 	"strconv"
@@ -53,7 +54,7 @@ func (o *OpenOcean) fetchOpenOceanSwap(params *SwapParams) map[string]interface{
 		to = OpenOceanNativeMapping[params.Chain]
 	}
 
-	amount := utils.RoundDown(params.Amount.Float64()/math.Pow10(params.FromToken.Decimals), models.PriceDecimals)
+	amount := utils.RoundDown(params.Amount.Float64()/math.Pow10(params.FromToken.Decimals), config.PriceDecimals)
 
 	queryParams := map[string]string{
 		"inTokenAddress":  from,

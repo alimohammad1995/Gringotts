@@ -13,7 +13,7 @@ func InboundTransaction(
 	chain models.Blockchain,
 	tokenAddress string,
 	amount *uint256.Int,
-	slippageBPS models.BPS,
+	slippageBPS int,
 ) (*provider.Transaction, error) {
 	token := models.GetToken(chain, tokenAddress)
 
@@ -70,7 +70,7 @@ func OutboundTransaction(
 	recipient string,
 	tokenAddress string,
 	amount *uint256.Int,
-	slippageBPS models.BPS,
+	slippageBPS int,
 ) (*provider.Transaction, error) {
 	desiredToken := models.GetToken(chain, tokenAddress)
 

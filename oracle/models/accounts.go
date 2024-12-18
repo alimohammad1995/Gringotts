@@ -2,7 +2,10 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/blocto/solana-go-sdk/common"
 	"github.com/spf13/viper"
+	"gringotts/utils"
 	"os"
 )
 
@@ -51,18 +54,31 @@ func GetBridgeDiscriminator() []byte {
 	return accountModel.BridgeDiscriminator
 }
 
-func GetPDA() string {
-	return accountModel.PDA
-}
-
 func GetPriceFeed() string {
 	return accountModel.PriceFeed
 }
 
-func GetPeer(b Blockchain) string {
-	return accountModel.Peers[b]
+func GetGringotts(chain Blockchain) string {
+	return GetPDA(chain, [][]byte{[]byte(GringottsSeed)}).String()
+}
+
+func GetPeer(chain Blockchain, destination Blockchain) string {
+	return GetPDA(chain, [][]byte{[]byte(PeerSeed), utils.ToLittleEndianBytes(destination.GetLzEId())}).String()
 }
 
 func GetSigner() []byte {
 	return accountModel.Signer
+}
+
+func GetPDA(chain Blockchain, seeds [][]byte) common.PublicKey {
+	if chain != Solana && chain != SolanaDev {
+		panic(fmt.Sprintf("need solana as the chain"))
+	}
+
+	pda, _, _ := common.FindProgramAddress(
+		seeds,
+		common.PublicKeyFromString(chain.GetContract()),
+	)
+
+	return pda
 }

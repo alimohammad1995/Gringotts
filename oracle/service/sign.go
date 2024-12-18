@@ -24,7 +24,7 @@ func CreateBlockchainTransaction(
 	outTransactions map[models.Blockchain][]*models.Transaction,
 ) (*provider.UnsignedTransaction, error) {
 	switch blockchain {
-	case models.Solana:
+	case models.Solana, models.SolanaDev:
 		return createSolanaTransaction(amount, wallet, blockchain, inTransactions, outTransactions)
 	default:
 		return createEVMTransaction(amount, blockchain, inTransactions, outTransactions)
@@ -106,7 +106,7 @@ func createSolanaTransaction(
 	solanaClient.New()
 	accounts := []types.AccountMeta{
 		{PubKey: solana.PublicKeyFromString(models.GetPriceFeed()), IsSigner: false, IsWritable: false},
-		{PubKey: solana.PublicKeyFromString(models.GetPDA()), IsSigner: false, IsWritable: false},
+		{PubKey: solana.PublicKeyFromString(models.GetGringotts(blockchain)), IsSigner: false, IsWritable: false},
 	}
 
 	instruction := types.Instruction{

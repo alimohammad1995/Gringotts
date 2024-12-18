@@ -12,9 +12,9 @@ import (
 )
 
 type OutboundTransactionItemRequest struct {
-	Token           string     `json:"token"`
-	DistributionBPS models.BPS `json:"distribution"`
-	Recipient       string     `json:"recipient"`
+	Token           string `json:"token"`
+	DistributionBPS int    `json:"distribution"`
+	Recipient       string `json:"recipient"`
 }
 
 type InboundTransactionItemRequest struct {
@@ -26,7 +26,7 @@ type TransactionRequest struct {
 	User        string                                                 `json:"user"`
 	SrcItems    map[models.Blockchain][]InboundTransactionItemRequest  `json:"src_items"`
 	DstItems    map[models.Blockchain][]OutboundTransactionItemRequest `json:"dst_items"`
-	SlippageBPS models.BPS                                             `json:"slippage_bps"`
+	SlippageBPS int                                                    `json:"slippage_bps"`
 }
 
 type TransactionResponse struct {
@@ -50,7 +50,7 @@ func HandleTransaction(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
 	}
 
-	request.SlippageBPS = models.BPS(utils.Max(uint16(request.SlippageBPS), config.DefaultSlippageBPS))
+	request.SlippageBPS = utils.Max(request.SlippageBPS, config.DefaultSlippageBPS)
 
 	/* Inbound transaction */
 	outAmountUSDX := uint256.NewInt(0)

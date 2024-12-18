@@ -20,7 +20,7 @@ type Transaction struct {
 	SrcAmount string
 
 	Recipient       string `json:"recipient"`
-	DistributionBPS BPS    `json:"distribution_bps"`
+	DistributionBPS int    `json:"distribution_bps"`
 
 	OutAmount    *uint256.Int `json:"out_amount"`
 	MinOutAmount *uint256.Int `json:"min_out_amount"`

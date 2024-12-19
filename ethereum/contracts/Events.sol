@@ -3,13 +3,14 @@ pragma solidity ^0.8.10;
 
 import {ChainId} from "./Types.sol";
 
-    event SendChainTransferItemEvent (
+    event SendChainTransferEvent (
+        address indexed user,
         ChainId chainId,
         string indexed messageId,
         uint256 amountUSDX
     );
 
-    event ReceiveChainTransferItemEvent (
+    event ReceiveChainTransferEvent (
         ChainId chainId,
         string indexed messageId,
         address asset,

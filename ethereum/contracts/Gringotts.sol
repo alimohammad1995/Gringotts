@@ -10,7 +10,7 @@ import {Market} from "./Market.sol";
 import {Vault} from "./Vault.sol";
 import {AddressUtils, MathUtils} from "./utils/Utils.sol";
 import {LayerZeroBridge} from "./LayerZeroMessenger.sol";
-import {SendChainTransferItemEvent, ReceiveChainTransferItemEvent} from "./Events.sol";
+import {SendChainTransferEvent, ReceiveChainTransferEvent} from "./Events.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -210,7 +210,8 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
                 uint128(outboundMetaData[i].executionGasAmount)
             );
 
-            emit SendChainTransferItemEvent(
+            emit SendChainTransferEvent(
+                msg.sender,
                 bridgeOutbound.chainId,
                 messageIds[i],
                 chainTotalAmountUSDX
@@ -438,7 +439,7 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
                     }
                 }
 
-                emit ReceiveChainTransferItemEvent(_chainId, _guid, AddressUtils.bytes32ToAddress(item.asset), recipient, item.amountUSDX);
+                emit ReceiveChainTransferEvent(_chainId, _guid, AddressUtils.bytes32ToAddress(item.asset), recipient, item.amountUSDX);
             }
         }
     }

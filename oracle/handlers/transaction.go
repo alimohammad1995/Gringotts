@@ -178,10 +178,20 @@ func transform(transaction *provider.Transaction) *models.Transaction {
 	}
 
 	if transaction.Swap != nil {
+		accounts := make([]models.Account, 0, len(transaction.Swap.Accounts))
+		for _, account := range transaction.Swap.Accounts {
+			accounts = append(accounts, models.Account{
+				Address:    account.Address,
+				IsSigner:   account.IsSigner,
+				IsWritable: account.IsWriteable,
+			})
+		}
+
 		out.Swap = &models.Swap{
-			Address:       transaction.Swap.ExecutorAddress,
+			Executor:      transaction.Swap.ExecutorAddress,
 			Command:       transaction.Swap.Command,
 			MetaData:      transaction.Swap.Metadata,
+			Accounts:      accounts,
 			AddressLookup: transaction.Swap.AddressLookup,
 		}
 	}

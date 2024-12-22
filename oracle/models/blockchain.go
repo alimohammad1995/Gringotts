@@ -19,6 +19,7 @@ type BlockchainModel struct {
 	Endpoint string `json:"endpoint"`
 	Icon     string `json:"icon"`
 	Contract string `json:"contract"`
+	Decimals uint8  `json:"decimals"`
 }
 
 const (

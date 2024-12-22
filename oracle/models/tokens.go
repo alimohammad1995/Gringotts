@@ -45,6 +45,11 @@ func LoadTokens() error {
 		tokenCount += len(tokenList)
 	}
 	log.Info(fmt.Sprintf("Loaded %d stable tokens", tokenCount))
+
+	if len(stableCoins[Solana]) != 1 {
+		return fmt.Errorf("solana can only have 1 stable coin")
+	}
+
 	return nil
 }
 

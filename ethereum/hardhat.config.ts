@@ -20,6 +20,11 @@ const config: HardhatUserConfig = {
             accounts: [process.env.PRIVATE_KEY || '', process.env.PRIVATE_KEY2 || ''],
         },
         arb: {
+            url: "https://arbitrum-mainnet.infura.io/v3/463ba1f0f1c34f1da7403e6f4e81ebef",
+            chainId: 42161,
+            accounts: [process.env.PRIVATE_KEY || '', process.env.PRIVATE_KEY2 || ''],
+        },
+        arb_test: {
             url: "https://arbitrum-sepolia.infura.io/v3/463ba1f0f1c34f1da7403e6f4e81ebef",
             chainId: 421614,
             accounts: [process.env.PRIVATE_KEY || '', process.env.PRIVATE_KEY2 || ''],

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"gringotts/blockchain"
 	"gringotts/config"
 	"gringotts/connection"
 	"gringotts/models"
@@ -17,7 +18,6 @@ import (
 	"github.com/blocto/solana-go-sdk/types"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/holiman/uint256"
 	"github.com/near/borsh-go"
 )
@@ -79,7 +79,9 @@ func EstimateMarketplaceSolana(
 			PubKey: solana.PublicKeyFromString(models.GetPeer(chain, chainIter)), IsSigner: false, IsWritable: false,
 		})
 	}
-	accounts = append(accounts, getEstimateAccounts()...)
+	for chainIter := range dstItems {
+		accounts = append(accounts, getEstimateAccounts(chainIter)...)
+	}
 
 	instruction := types.Instruction{
 		ProgramID: solana.PublicKeyFromString(chain.GetContract()),
@@ -131,8 +133,8 @@ func EstimateMarketplaceSolana(
 	}, nil
 }
 
-func getEstimateAccounts() []types.AccountMeta {
-	accounts := models.GetEstimateAccounts()
+func getEstimateAccounts(chain models.Blockchain) []types.AccountMeta {
+	accounts := models.GetEstimateAccounts(chain)
 	res := make([]types.AccountMeta, len(accounts))
 
 	for i, account := range accounts {
@@ -151,7 +153,7 @@ func estimateMarketplaceEVM(
 	dstItems map[models.Blockchain][]string,
 	amount *uint256.Int,
 ) (*provider.Estimate, error) {
-	client, _ := getConnection(chain)
+	client, _ := blockchain.GetConnection(chain)
 	instance, _ := connection.NewGringottsEVMCaller(common.HexToAddress(chain.GetContract()), client)
 
 	inbound := connection.GringottsEstimateInboundTransfer{
@@ -216,8 +218,4 @@ func GetExecutionParams(chain models.Blockchain, asset string) (uint64, uint16, 
 	default:
 		return 500_000, config.MaxCommandLength, 0
 	}
-}
-
-func getConnection(blockchain models.Blockchain) (*ethclient.Client, error) {
-	return ethclient.Dial(blockchain.GetEndpoint())
 }

@@ -30,6 +30,7 @@ func (o *Jupiter) GetSwap(params *SwapParams) (*Swap, error) {
 	swapData, _ := base64.StdEncoding.DecodeString(swapInstruction["data"].(string))
 
 	metadata := []byte{byte(len(swapAccounts))}
+	var accounts []Account
 
 	for _, swapAccount := range swapAccounts {
 		pubkey := swapAccount.(map[string]interface{})["pubkey"].(string)
@@ -43,6 +44,8 @@ func (o *Jupiter) GetSwap(params *SwapParams) (*Swap, error) {
 		} else {
 			metadata = append(metadata, 0)
 		}
+
+		accounts = append(accounts, Account{Address: pubkey, IsSigner: false, IsWriteable: isWriteable})
 	}
 
 	alts := make([]string, 0, len(swapRes["addressLookupTableAddresses"].([]interface{})))
@@ -60,6 +63,7 @@ func (o *Jupiter) GetSwap(params *SwapParams) (*Swap, error) {
 		OutAmount:       uint256.NewInt(uint64(outAmount)),
 		MinOutAmount:    uint256.NewInt(uint64(outAmountMin)),
 		AddressLookup:   alts,
+		Accounts:        accounts,
 	}, nil
 }
 

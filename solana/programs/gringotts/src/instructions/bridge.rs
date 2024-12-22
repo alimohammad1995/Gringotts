@@ -84,7 +84,7 @@ impl<'info> Bridge<'info> {
             let item = &params.inbound.items[i];
             let first_stable_coin_amount = gringotts_stable_coin.amount;
 
-            if self_peer.stable_coins.contains(&item.asset) {
+            if self_peer.stable_coins.contains(&item.asset) && stable_coin_mint.key().to_bytes() == item.asset {
                 let user_token_account = &remaining_accounts[r];
 
                 let cpi_accounts = Transfer {
@@ -114,6 +114,7 @@ impl<'info> Bridge<'info> {
                 )?;
 
                 let mut gringotts_token: Account<TokenAccount> = Account::try_from(token_account)?;
+                require!(gringotts_token.owner.key() == gringotts.key(), BridgeErrorCode::InvalidParams);
 
                 if item.asset == [0; 32] {
                     let seeds = &[GRINGOTTS_SEED, &[gringotts.bump]];
@@ -185,7 +186,7 @@ impl<'info> Bridge<'info> {
             );
         }
 
-        // CHECK net_usdx >= item.amount
+        require!(net_usdx >= params.inbound.amount_usdx, BridgeErrorCode::InvalidSwapAmount);
 
         /*********** [Estimate transaction] ***********/
         let mut estimate_outbounds = Vec::with_capacity(params.outbounds.len());

@@ -140,7 +140,7 @@ type Peer struct {
 
 // GringottsEVMMetaData contains all meta data concerning the GringottsEVM contract.
 var GringottsEVMMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"ChainId\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_networkDecimals\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"_lzEndpoint\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"needed\",\"type\":\"uint256\"}],\"name\":\"InsufficientBalance\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidDelegate\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidEndpointCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"optionType\",\"type\":\"uint16\"}],\"name\":\"InvalidOptionType\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"LzTokenUnavailable\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"eid\",\"type\":\"uint32\"}],\"name\":\"NoPeer\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"msgValue\",\"type\":\"uint256\"}],\"name\":\"NotEnoughNative\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"OnlyEndpoint\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"eid\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"sender\",\"type\":\"bytes32\"}],\"name\":\"OnlyPeer\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"bits\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"SafeCastOverflowedUintDowncast\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"SafeERC20FailedOperation\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"blocked\",\"type\":\"bool\"}],\"name\":\"BlockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"eid\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"peer\",\"type\":\"bytes32\"}],\"name\":\"PeerSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"ChainId\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"string\",\"name\":\"messageId\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amountUSDX\",\"type\":\"uint256\"}],\"name\":\"ReceiveChainTransferItemEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"ChainId\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"string\",\"name\":\"messageId\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amountUSDX\",\"type\":\"uint256\"}],\"name\":\"SendChainTransferItemEvent\",\"type\":\"event\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint32\",\"name\":\"srcEid\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"sender\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"}],\"internalType\":\"structOrigin\",\"name\":\"origin\",\"type\":\"tuple\"}],\"name\":\"allowInitializePath\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_token\",\"type\":\"address\"}],\"name\":\"balanceERC20\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"balanceNative\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"blockAccount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"amountUSDX\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"GringottsAddress\",\"name\":\"asset\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"GringottsAddress\",\"name\":\"executor\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"command\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"metadata\",\"type\":\"bytes\"},{\"internalType\":\"GringottsAddress\",\"name\":\"stableToken\",\"type\":\"bytes32\"}],\"internalType\":\"structGringotts.Swap\",\"name\":\"swap\",\"type\":\"tuple\"}],\"internalType\":\"structGringotts.BridgeInboundTransferItem[]\",\"name\":\"items\",\"type\":\"tuple[]\"}],\"internalType\":\"structGringotts.BridgeInboundTransfer\",\"name\":\"inbound\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"ChainId\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"components\":[{\"internalType\":\"GringottsAddress\",\"name\":\"asset\",\"type\":\"bytes32\"},{\"internalType\":\"GringottsAddress\",\"name\":\"recipient\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"executionGasAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint16\",\"name\":\"distributionBP\",\"type\":\"uint16\"},{\"components\":[{\"internalType\":\"GringottsAddress\",\"name\":\"executor\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"command\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"metadata\",\"type\":\"bytes\"},{\"internalType\":\"GringottsAddress\",\"name\":\"stableToken\",\"type\":\"bytes32\"}],\"internalType\":\"structGringotts.Swap\",\"name\":\"swap\",\"type\":\"tuple\"}],\"internalType\":\"structGringotts.BridgeOutboundTransferItem[]\",\"name\":\"items\",\"type\":\"tuple[]\"}],\"internalType\":\"structGringotts.BridgeOutboundTransfer[]\",\"name\":\"outbounds\",\"type\":\"tuple[]\"}],\"internalType\":\"structGringotts.BridgeRequest\",\"name\":\"_params\",\"type\":\"tuple\"}],\"name\":\"bridge\",\"outputs\":[{\"components\":[{\"internalType\":\"string[]\",\"name\":\"messageIds\",\"type\":\"string[]\"}],\"internalType\":\"structGringotts.BridgeResponse\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"endpoint\",\"outputs\":[{\"internalType\":\"contractILayerZeroEndpointV2\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"amountUSDX\",\"type\":\"uint256\"}],\"internalType\":\"structGringotts.EstimateInboundTransfer\",\"name\":\"inbound\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"ChainId\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"components\":[{\"internalType\":\"GringottsAddress\",\"name\":\"asset\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"executionGasAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint16\",\"name\":\"executionCommandLength\",\"type\":\"uint16\"},{\"internalType\":\"uint16\",\"name\":\"executionMetadataLength\",\"type\":\"uint16\"}],\"internalType\":\"structGringotts.EstimateOutboundTransferItem[]\",\"name\":\"items\",\"type\":\"tuple[]\"}],\"internalType\":\"structGringotts.EstimateOutboundTransfer[]\",\"name\":\"outbounds\",\"type\":\"tuple[]\"}],\"internalType\":\"structGringotts.EstimateRequest\",\"name\":\"_params\",\"type\":\"tuple\"}],\"name\":\"estimate\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"commissionUSDX\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"transferGasAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"transferGasAmountUSDX\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"ChainId\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"executionGasAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"executionGasAmountUSDX\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"transferGasAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"transferGasAmountUSDX\",\"type\":\"uint256\"}],\"internalType\":\"structGringotts.EstimateOutboundMetadata[]\",\"name\":\"outboundMetadata\",\"type\":\"tuple[]\"}],\"internalType\":\"structGringotts.EstimateResponse\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint32\",\"name\":\"srcEid\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"sender\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"}],\"internalType\":\"structOrigin\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"},{\"internalType\":\"address\",\"name\":\"_sender\",\"type\":\"address\"}],\"name\":\"isComposeMsgSender\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint32\",\"name\":\"srcEid\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"sender\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"}],\"internalType\":\"structOrigin\",\"name\":\"_origin\",\"type\":\"tuple\"},{\"internalType\":\"bytes32\",\"name\":\"_guid\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"_message\",\"type\":\"bytes\"},{\"internalType\":\"address\",\"name\":\"_executor\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_extraData\",\"type\":\"bytes\"}],\"name\":\"lzReceive\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"nextNonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"oAppVersion\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"senderVersion\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"receiverVersion\",\"type\":\"uint64\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"eid\",\"type\":\"uint32\"}],\"name\":\"peers\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"peer\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chainlinkPriceFeed\",\"type\":\"address\"}],\"name\":\"setChainlinkPriceFeed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint32\",\"name\":\"commissionMicroBPS\",\"type\":\"uint32\"}],\"internalType\":\"structConfig\",\"name\":\"_config\",\"type\":\"tuple\"}],\"name\":\"setConfig\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_delegate\",\"type\":\"address\"}],\"name\":\"setDelegate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"_eid\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"_peer\",\"type\":\"bytes32\"}],\"name\":\"setPeer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pythPriceFeed\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"_pythPriceFeedId\",\"type\":\"bytes32\"}],\"name\":\"setPythPriceFeed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_winklinkPriceFeed\",\"type\":\"address\"}],\"name\":\"setWinklinkPriceFeed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"_dstEid\",\"type\":\"uint32\"},{\"internalType\":\"string\",\"name\":\"_m\",\"type\":\"string\"}],\"name\":\"testSend\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"unblockAccount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ChainId\",\"name\":\"_chainID\",\"type\":\"uint8\"},{\"components\":[{\"internalType\":\"ChainId\",\"name\":\"chainID\",\"type\":\"uint8\"},{\"internalType\":\"GringottsAddress\",\"name\":\"endpoint\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"lzEID\",\"type\":\"uint32\"},{\"internalType\":\"GringottsAddress[]\",\"name\":\"stableCoins\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint128\",\"name\":\"baseGasEstimate\",\"type\":\"uint128\"}],\"internalType\":\"structPeer\",\"name\":\"_agent\",\"type\":\"tuple\"}],\"name\":\"updateAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_token\",\"type\":\"address\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawNative\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
+	ABI: "[{\"inputs\":[{\"internalType\":\"ChainId\",\"name\":\"_chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint8\",\"name\":\"_networkDecimals\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"_lzEndpoint\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"balance\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"needed\",\"type\":\"uint256\"}],\"name\":\"InsufficientBalance\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidDelegate\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"InvalidEndpointCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint16\",\"name\":\"optionType\",\"type\":\"uint16\"}],\"name\":\"InvalidOptionType\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"LzTokenUnavailable\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"eid\",\"type\":\"uint32\"}],\"name\":\"NoPeer\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"msgValue\",\"type\":\"uint256\"}],\"name\":\"NotEnoughNative\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"OnlyEndpoint\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"eid\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"sender\",\"type\":\"bytes32\"}],\"name\":\"OnlyPeer\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"bits\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"SafeCastOverflowedUintDowncast\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"SafeERC20FailedOperation\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"blocked\",\"type\":\"bool\"}],\"name\":\"BlockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"eid\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"peer\",\"type\":\"bytes32\"}],\"name\":\"PeerSet\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"ChainId\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"string\",\"name\":\"messageId\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"asset\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"recipient\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amountUSDX\",\"type\":\"uint256\"}],\"name\":\"ReceiveChainTransferEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"ChainId\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"indexed\":true,\"internalType\":\"string\",\"name\":\"messageId\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amountUSDX\",\"type\":\"uint256\"}],\"name\":\"SendChainTransferEvent\",\"type\":\"event\"},{\"stateMutability\":\"payable\",\"type\":\"fallback\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint32\",\"name\":\"srcEid\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"sender\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"}],\"internalType\":\"structOrigin\",\"name\":\"origin\",\"type\":\"tuple\"}],\"name\":\"allowInitializePath\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_token\",\"type\":\"address\"}],\"name\":\"balanceERC20\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"balanceNative\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"blockAccount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"amountUSDX\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"GringottsAddress\",\"name\":\"asset\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"GringottsAddress\",\"name\":\"executor\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"command\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"metadata\",\"type\":\"bytes\"},{\"internalType\":\"GringottsAddress\",\"name\":\"stableToken\",\"type\":\"bytes32\"}],\"internalType\":\"structGringotts.Swap\",\"name\":\"swap\",\"type\":\"tuple\"}],\"internalType\":\"structGringotts.BridgeInboundTransferItem[]\",\"name\":\"items\",\"type\":\"tuple[]\"}],\"internalType\":\"structGringotts.BridgeInboundTransfer\",\"name\":\"inbound\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"ChainId\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"components\":[{\"internalType\":\"GringottsAddress\",\"name\":\"asset\",\"type\":\"bytes32\"},{\"internalType\":\"GringottsAddress\",\"name\":\"recipient\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"executionGasAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint16\",\"name\":\"distributionBP\",\"type\":\"uint16\"},{\"components\":[{\"internalType\":\"GringottsAddress\",\"name\":\"executor\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"command\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"metadata\",\"type\":\"bytes\"},{\"internalType\":\"GringottsAddress\",\"name\":\"stableToken\",\"type\":\"bytes32\"}],\"internalType\":\"structGringotts.Swap\",\"name\":\"swap\",\"type\":\"tuple\"}],\"internalType\":\"structGringotts.BridgeOutboundTransferItem[]\",\"name\":\"items\",\"type\":\"tuple[]\"}],\"internalType\":\"structGringotts.BridgeOutboundTransfer[]\",\"name\":\"outbounds\",\"type\":\"tuple[]\"}],\"internalType\":\"structGringotts.BridgeRequest\",\"name\":\"_params\",\"type\":\"tuple\"}],\"name\":\"bridge\",\"outputs\":[{\"components\":[{\"internalType\":\"string[]\",\"name\":\"messageIds\",\"type\":\"string[]\"}],\"internalType\":\"structGringotts.BridgeResponse\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"endpoint\",\"outputs\":[{\"internalType\":\"contractILayerZeroEndpointV2\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"amountUSDX\",\"type\":\"uint256\"}],\"internalType\":\"structGringotts.EstimateInboundTransfer\",\"name\":\"inbound\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"ChainId\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"components\":[{\"internalType\":\"GringottsAddress\",\"name\":\"asset\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"executionGasAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint16\",\"name\":\"executionCommandLength\",\"type\":\"uint16\"},{\"internalType\":\"uint16\",\"name\":\"executionMetadataLength\",\"type\":\"uint16\"}],\"internalType\":\"structGringotts.EstimateOutboundTransferItem[]\",\"name\":\"items\",\"type\":\"tuple[]\"}],\"internalType\":\"structGringotts.EstimateOutboundTransfer[]\",\"name\":\"outbounds\",\"type\":\"tuple[]\"}],\"internalType\":\"structGringotts.EstimateRequest\",\"name\":\"_params\",\"type\":\"tuple\"}],\"name\":\"estimate\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"commissionUSDX\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"transferGasAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"transferGasAmountUSDX\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"ChainId\",\"name\":\"chainId\",\"type\":\"uint8\"},{\"internalType\":\"uint256\",\"name\":\"executionGasAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"executionGasAmountUSDX\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"transferGasAmount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"transferGasAmountUSDX\",\"type\":\"uint256\"}],\"internalType\":\"structGringotts.EstimateOutboundMetadata[]\",\"name\":\"outboundMetadata\",\"type\":\"tuple[]\"}],\"internalType\":\"structGringotts.EstimateResponse\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint32\",\"name\":\"srcEid\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"sender\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"}],\"internalType\":\"structOrigin\",\"name\":\"\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"},{\"internalType\":\"address\",\"name\":\"_sender\",\"type\":\"address\"}],\"name\":\"isComposeMsgSender\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint32\",\"name\":\"srcEid\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"sender\",\"type\":\"bytes32\"},{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"}],\"internalType\":\"structOrigin\",\"name\":\"_origin\",\"type\":\"tuple\"},{\"internalType\":\"bytes32\",\"name\":\"_guid\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"_message\",\"type\":\"bytes\"},{\"internalType\":\"address\",\"name\":\"_executor\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"_extraData\",\"type\":\"bytes\"}],\"name\":\"lzReceive\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"nextNonce\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"nonce\",\"type\":\"uint64\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"oAppVersion\",\"outputs\":[{\"internalType\":\"uint64\",\"name\":\"senderVersion\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"receiverVersion\",\"type\":\"uint64\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"eid\",\"type\":\"uint32\"}],\"name\":\"peers\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"peer\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_chainlinkPriceFeed\",\"type\":\"address\"}],\"name\":\"setChainlinkPriceFeed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"uint32\",\"name\":\"commissionMicroBPS\",\"type\":\"uint32\"}],\"internalType\":\"structConfig\",\"name\":\"_config\",\"type\":\"tuple\"}],\"name\":\"setConfig\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_delegate\",\"type\":\"address\"}],\"name\":\"setDelegate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"_eid\",\"type\":\"uint32\"},{\"internalType\":\"bytes32\",\"name\":\"_peer\",\"type\":\"bytes32\"}],\"name\":\"setPeer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pythPriceFeed\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"_pythPriceFeedId\",\"type\":\"bytes32\"}],\"name\":\"setPythPriceFeed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_winklinkPriceFeed\",\"type\":\"address\"}],\"name\":\"setWinklinkPriceFeed\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"_dstEid\",\"type\":\"uint32\"},{\"internalType\":\"string\",\"name\":\"_m\",\"type\":\"string\"}],\"name\":\"testSend\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"unblockAccount\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"ChainId\",\"name\":\"_chainID\",\"type\":\"uint8\"},{\"components\":[{\"internalType\":\"ChainId\",\"name\":\"chainID\",\"type\":\"uint8\"},{\"internalType\":\"GringottsAddress\",\"name\":\"endpoint\",\"type\":\"bytes32\"},{\"internalType\":\"uint32\",\"name\":\"lzEID\",\"type\":\"uint32\"},{\"internalType\":\"GringottsAddress[]\",\"name\":\"stableCoins\",\"type\":\"bytes32[]\"},{\"internalType\":\"uint128\",\"name\":\"baseGasEstimate\",\"type\":\"uint128\"}],\"internalType\":\"structPeer\",\"name\":\"_agent\",\"type\":\"tuple\"}],\"name\":\"updateAgent\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_token\",\"type\":\"address\"}],\"name\":\"withdrawERC20\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdrawNative\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"stateMutability\":\"payable\",\"type\":\"receive\"}]",
 }
 
 // GringottsEVMABI is the input ABI used to generate the binding from.
@@ -1424,9 +1424,9 @@ func (_GringottsEVM *GringottsEVMFilterer) ParsePeerSet(log types.Log) (*Gringot
 	return event, nil
 }
 
-// GringottsEVMReceiveChainTransferItemEventIterator is returned from FilterReceiveChainTransferItemEvent and is used to iterate over the raw logs and unpacked data for ReceiveChainTransferItemEvent events raised by the GringottsEVM contract.
-type GringottsEVMReceiveChainTransferItemEventIterator struct {
-	Event *GringottsEVMReceiveChainTransferItemEvent // Event containing the contract specifics and raw log
+// GringottsEVMReceiveChainTransferEventIterator is returned from FilterReceiveChainTransferEvent and is used to iterate over the raw logs and unpacked data for ReceiveChainTransferEvent events raised by the GringottsEVM contract.
+type GringottsEVMReceiveChainTransferEventIterator struct {
+	Event *GringottsEVMReceiveChainTransferEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1440,7 +1440,7 @@ type GringottsEVMReceiveChainTransferItemEventIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *GringottsEVMReceiveChainTransferItemEventIterator) Next() bool {
+func (it *GringottsEVMReceiveChainTransferEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1449,7 +1449,7 @@ func (it *GringottsEVMReceiveChainTransferItemEventIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(GringottsEVMReceiveChainTransferItemEvent)
+			it.Event = new(GringottsEVMReceiveChainTransferEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1464,7 +1464,7 @@ func (it *GringottsEVMReceiveChainTransferItemEventIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(GringottsEVMReceiveChainTransferItemEvent)
+		it.Event = new(GringottsEVMReceiveChainTransferEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1480,19 +1480,19 @@ func (it *GringottsEVMReceiveChainTransferItemEventIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *GringottsEVMReceiveChainTransferItemEventIterator) Error() error {
+func (it *GringottsEVMReceiveChainTransferEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *GringottsEVMReceiveChainTransferItemEventIterator) Close() error {
+func (it *GringottsEVMReceiveChainTransferEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// GringottsEVMReceiveChainTransferItemEvent represents a ReceiveChainTransferItemEvent event raised by the GringottsEVM contract.
-type GringottsEVMReceiveChainTransferItemEvent struct {
+// GringottsEVMReceiveChainTransferEvent represents a ReceiveChainTransferEvent event raised by the GringottsEVM contract.
+type GringottsEVMReceiveChainTransferEvent struct {
 	ChainId    uint8
 	MessageId  common.Hash
 	Asset      common.Address
@@ -1501,34 +1501,34 @@ type GringottsEVMReceiveChainTransferItemEvent struct {
 	Raw        types.Log // Blockchain specific contextual infos
 }
 
-// FilterReceiveChainTransferItemEvent is a free log retrieval operation binding the contract event 0x4bb0b950bbf82e14a0887fc11c50af8cc602e9a3bb4f916a55ca01910f31d50e.
+// FilterReceiveChainTransferEvent is a free log retrieval operation binding the contract event 0xd57fd8c519641fd0d48d398085ac7e409f2e00827088cfe317a3802bde2b674e.
 //
-// Solidity: event ReceiveChainTransferItemEvent(uint8 chainId, string indexed messageId, address asset, address recipient, uint256 amountUSDX)
-func (_GringottsEVM *GringottsEVMFilterer) FilterReceiveChainTransferItemEvent(opts *bind.FilterOpts, messageId []string) (*GringottsEVMReceiveChainTransferItemEventIterator, error) {
+// Solidity: event ReceiveChainTransferEvent(uint8 chainId, string indexed messageId, address asset, address recipient, uint256 amountUSDX)
+func (_GringottsEVM *GringottsEVMFilterer) FilterReceiveChainTransferEvent(opts *bind.FilterOpts, messageId []string) (*GringottsEVMReceiveChainTransferEventIterator, error) {
 
 	var messageIdRule []interface{}
 	for _, messageIdItem := range messageId {
 		messageIdRule = append(messageIdRule, messageIdItem)
 	}
 
-	logs, sub, err := _GringottsEVM.contract.FilterLogs(opts, "ReceiveChainTransferItemEvent", messageIdRule)
+	logs, sub, err := _GringottsEVM.contract.FilterLogs(opts, "ReceiveChainTransferEvent", messageIdRule)
 	if err != nil {
 		return nil, err
 	}
-	return &GringottsEVMReceiveChainTransferItemEventIterator{contract: _GringottsEVM.contract, event: "ReceiveChainTransferItemEvent", logs: logs, sub: sub}, nil
+	return &GringottsEVMReceiveChainTransferEventIterator{contract: _GringottsEVM.contract, event: "ReceiveChainTransferEvent", logs: logs, sub: sub}, nil
 }
 
-// WatchReceiveChainTransferItemEvent is a free log subscription operation binding the contract event 0x4bb0b950bbf82e14a0887fc11c50af8cc602e9a3bb4f916a55ca01910f31d50e.
+// WatchReceiveChainTransferEvent is a free log subscription operation binding the contract event 0xd57fd8c519641fd0d48d398085ac7e409f2e00827088cfe317a3802bde2b674e.
 //
-// Solidity: event ReceiveChainTransferItemEvent(uint8 chainId, string indexed messageId, address asset, address recipient, uint256 amountUSDX)
-func (_GringottsEVM *GringottsEVMFilterer) WatchReceiveChainTransferItemEvent(opts *bind.WatchOpts, sink chan<- *GringottsEVMReceiveChainTransferItemEvent, messageId []string) (event.Subscription, error) {
+// Solidity: event ReceiveChainTransferEvent(uint8 chainId, string indexed messageId, address asset, address recipient, uint256 amountUSDX)
+func (_GringottsEVM *GringottsEVMFilterer) WatchReceiveChainTransferEvent(opts *bind.WatchOpts, sink chan<- *GringottsEVMReceiveChainTransferEvent, messageId []string) (event.Subscription, error) {
 
 	var messageIdRule []interface{}
 	for _, messageIdItem := range messageId {
 		messageIdRule = append(messageIdRule, messageIdItem)
 	}
 
-	logs, sub, err := _GringottsEVM.contract.WatchLogs(opts, "ReceiveChainTransferItemEvent", messageIdRule)
+	logs, sub, err := _GringottsEVM.contract.WatchLogs(opts, "ReceiveChainTransferEvent", messageIdRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1538,8 +1538,8 @@ func (_GringottsEVM *GringottsEVMFilterer) WatchReceiveChainTransferItemEvent(op
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(GringottsEVMReceiveChainTransferItemEvent)
-				if err := _GringottsEVM.contract.UnpackLog(event, "ReceiveChainTransferItemEvent", log); err != nil {
+				event := new(GringottsEVMReceiveChainTransferEvent)
+				if err := _GringottsEVM.contract.UnpackLog(event, "ReceiveChainTransferEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1560,21 +1560,21 @@ func (_GringottsEVM *GringottsEVMFilterer) WatchReceiveChainTransferItemEvent(op
 	}), nil
 }
 
-// ParseReceiveChainTransferItemEvent is a log parse operation binding the contract event 0x4bb0b950bbf82e14a0887fc11c50af8cc602e9a3bb4f916a55ca01910f31d50e.
+// ParseReceiveChainTransferEvent is a log parse operation binding the contract event 0xd57fd8c519641fd0d48d398085ac7e409f2e00827088cfe317a3802bde2b674e.
 //
-// Solidity: event ReceiveChainTransferItemEvent(uint8 chainId, string indexed messageId, address asset, address recipient, uint256 amountUSDX)
-func (_GringottsEVM *GringottsEVMFilterer) ParseReceiveChainTransferItemEvent(log types.Log) (*GringottsEVMReceiveChainTransferItemEvent, error) {
-	event := new(GringottsEVMReceiveChainTransferItemEvent)
-	if err := _GringottsEVM.contract.UnpackLog(event, "ReceiveChainTransferItemEvent", log); err != nil {
+// Solidity: event ReceiveChainTransferEvent(uint8 chainId, string indexed messageId, address asset, address recipient, uint256 amountUSDX)
+func (_GringottsEVM *GringottsEVMFilterer) ParseReceiveChainTransferEvent(log types.Log) (*GringottsEVMReceiveChainTransferEvent, error) {
+	event := new(GringottsEVMReceiveChainTransferEvent)
+	if err := _GringottsEVM.contract.UnpackLog(event, "ReceiveChainTransferEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// GringottsEVMSendChainTransferItemEventIterator is returned from FilterSendChainTransferItemEvent and is used to iterate over the raw logs and unpacked data for SendChainTransferItemEvent events raised by the GringottsEVM contract.
-type GringottsEVMSendChainTransferItemEventIterator struct {
-	Event *GringottsEVMSendChainTransferItemEvent // Event containing the contract specifics and raw log
+// GringottsEVMSendChainTransferEventIterator is returned from FilterSendChainTransferEvent and is used to iterate over the raw logs and unpacked data for SendChainTransferEvent events raised by the GringottsEVM contract.
+type GringottsEVMSendChainTransferEventIterator struct {
+	Event *GringottsEVMSendChainTransferEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1588,7 +1588,7 @@ type GringottsEVMSendChainTransferItemEventIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *GringottsEVMSendChainTransferItemEventIterator) Next() bool {
+func (it *GringottsEVMSendChainTransferEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1597,7 +1597,7 @@ func (it *GringottsEVMSendChainTransferItemEventIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(GringottsEVMSendChainTransferItemEvent)
+			it.Event = new(GringottsEVMSendChainTransferEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1612,7 +1612,7 @@ func (it *GringottsEVMSendChainTransferItemEventIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(GringottsEVMSendChainTransferItemEvent)
+		it.Event = new(GringottsEVMSendChainTransferEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1628,53 +1628,64 @@ func (it *GringottsEVMSendChainTransferItemEventIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *GringottsEVMSendChainTransferItemEventIterator) Error() error {
+func (it *GringottsEVMSendChainTransferEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *GringottsEVMSendChainTransferItemEventIterator) Close() error {
+func (it *GringottsEVMSendChainTransferEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// GringottsEVMSendChainTransferItemEvent represents a SendChainTransferItemEvent event raised by the GringottsEVM contract.
-type GringottsEVMSendChainTransferItemEvent struct {
+// GringottsEVMSendChainTransferEvent represents a SendChainTransferEvent event raised by the GringottsEVM contract.
+type GringottsEVMSendChainTransferEvent struct {
+	User       common.Address
 	ChainId    uint8
 	MessageId  common.Hash
 	AmountUSDX *big.Int
 	Raw        types.Log // Blockchain specific contextual infos
 }
 
-// FilterSendChainTransferItemEvent is a free log retrieval operation binding the contract event 0xa4f620c6cc41641d7f414eb22381d54a707d6bfd14a50ed975ef0a1586e4ebfb.
+// FilterSendChainTransferEvent is a free log retrieval operation binding the contract event 0xe9661c3d243e1a480444bebfeeacf4307666da73067d3f37280fba3bfc299cb8.
 //
-// Solidity: event SendChainTransferItemEvent(uint8 chainId, string indexed messageId, uint256 amountUSDX)
-func (_GringottsEVM *GringottsEVMFilterer) FilterSendChainTransferItemEvent(opts *bind.FilterOpts, messageId []string) (*GringottsEVMSendChainTransferItemEventIterator, error) {
+// Solidity: event SendChainTransferEvent(address indexed user, uint8 chainId, string indexed messageId, uint256 amountUSDX)
+func (_GringottsEVM *GringottsEVMFilterer) FilterSendChainTransferEvent(opts *bind.FilterOpts, user []common.Address, messageId []string) (*GringottsEVMSendChainTransferEventIterator, error) {
+
+	var userRule []interface{}
+	for _, userItem := range user {
+		userRule = append(userRule, userItem)
+	}
 
 	var messageIdRule []interface{}
 	for _, messageIdItem := range messageId {
 		messageIdRule = append(messageIdRule, messageIdItem)
 	}
 
-	logs, sub, err := _GringottsEVM.contract.FilterLogs(opts, "SendChainTransferItemEvent", messageIdRule)
+	logs, sub, err := _GringottsEVM.contract.FilterLogs(opts, "SendChainTransferEvent", userRule, messageIdRule)
 	if err != nil {
 		return nil, err
 	}
-	return &GringottsEVMSendChainTransferItemEventIterator{contract: _GringottsEVM.contract, event: "SendChainTransferItemEvent", logs: logs, sub: sub}, nil
+	return &GringottsEVMSendChainTransferEventIterator{contract: _GringottsEVM.contract, event: "SendChainTransferEvent", logs: logs, sub: sub}, nil
 }
 
-// WatchSendChainTransferItemEvent is a free log subscription operation binding the contract event 0xa4f620c6cc41641d7f414eb22381d54a707d6bfd14a50ed975ef0a1586e4ebfb.
+// WatchSendChainTransferEvent is a free log subscription operation binding the contract event 0xe9661c3d243e1a480444bebfeeacf4307666da73067d3f37280fba3bfc299cb8.
 //
-// Solidity: event SendChainTransferItemEvent(uint8 chainId, string indexed messageId, uint256 amountUSDX)
-func (_GringottsEVM *GringottsEVMFilterer) WatchSendChainTransferItemEvent(opts *bind.WatchOpts, sink chan<- *GringottsEVMSendChainTransferItemEvent, messageId []string) (event.Subscription, error) {
+// Solidity: event SendChainTransferEvent(address indexed user, uint8 chainId, string indexed messageId, uint256 amountUSDX)
+func (_GringottsEVM *GringottsEVMFilterer) WatchSendChainTransferEvent(opts *bind.WatchOpts, sink chan<- *GringottsEVMSendChainTransferEvent, user []common.Address, messageId []string) (event.Subscription, error) {
+
+	var userRule []interface{}
+	for _, userItem := range user {
+		userRule = append(userRule, userItem)
+	}
 
 	var messageIdRule []interface{}
 	for _, messageIdItem := range messageId {
 		messageIdRule = append(messageIdRule, messageIdItem)
 	}
 
-	logs, sub, err := _GringottsEVM.contract.WatchLogs(opts, "SendChainTransferItemEvent", messageIdRule)
+	logs, sub, err := _GringottsEVM.contract.WatchLogs(opts, "SendChainTransferEvent", userRule, messageIdRule)
 	if err != nil {
 		return nil, err
 	}
@@ -1684,8 +1695,8 @@ func (_GringottsEVM *GringottsEVMFilterer) WatchSendChainTransferItemEvent(opts 
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(GringottsEVMSendChainTransferItemEvent)
-				if err := _GringottsEVM.contract.UnpackLog(event, "SendChainTransferItemEvent", log); err != nil {
+				event := new(GringottsEVMSendChainTransferEvent)
+				if err := _GringottsEVM.contract.UnpackLog(event, "SendChainTransferEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1706,12 +1717,12 @@ func (_GringottsEVM *GringottsEVMFilterer) WatchSendChainTransferItemEvent(opts 
 	}), nil
 }
 
-// ParseSendChainTransferItemEvent is a log parse operation binding the contract event 0xa4f620c6cc41641d7f414eb22381d54a707d6bfd14a50ed975ef0a1586e4ebfb.
+// ParseSendChainTransferEvent is a log parse operation binding the contract event 0xe9661c3d243e1a480444bebfeeacf4307666da73067d3f37280fba3bfc299cb8.
 //
-// Solidity: event SendChainTransferItemEvent(uint8 chainId, string indexed messageId, uint256 amountUSDX)
-func (_GringottsEVM *GringottsEVMFilterer) ParseSendChainTransferItemEvent(log types.Log) (*GringottsEVMSendChainTransferItemEvent, error) {
-	event := new(GringottsEVMSendChainTransferItemEvent)
-	if err := _GringottsEVM.contract.UnpackLog(event, "SendChainTransferItemEvent", log); err != nil {
+// Solidity: event SendChainTransferEvent(address indexed user, uint8 chainId, string indexed messageId, uint256 amountUSDX)
+func (_GringottsEVM *GringottsEVMFilterer) ParseSendChainTransferEvent(log types.Log) (*GringottsEVMSendChainTransferEvent, error) {
+	event := new(GringottsEVMSendChainTransferEvent)
+	if err := _GringottsEVM.contract.UnpackLog(event, "SendChainTransferEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

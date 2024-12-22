@@ -14,10 +14,17 @@ type SwapParams struct {
 	SlippageBPS int
 }
 
+type Account struct {
+	Address     string
+	IsSigner    bool
+	IsWriteable bool
+}
+
 type Swap struct {
 	ExecutorAddress string
 	Command         string
 	Metadata        string
+	Accounts        []Account
 	AddressLookup   []string
 
 	OutAmount    *uint256.Int

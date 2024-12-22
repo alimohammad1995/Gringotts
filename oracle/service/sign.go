@@ -2,14 +2,12 @@ package service
 
 import (
 	"context"
-	solanaClient "github.com/blocto/solana-go-sdk/client"
 	solana "github.com/blocto/solana-go-sdk/common"
-	"github.com/blocto/solana-go-sdk/program/address_lookup_table"
 	"github.com/blocto/solana-go-sdk/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/gofiber/fiber/v2/log"
 	"github.com/holiman/uint256"
 	"github.com/near/borsh-go"
+	blockchain2 "gringotts/blockchain"
 	"gringotts/connection"
 	"gringotts/models"
 	"gringotts/provider"
@@ -36,13 +34,11 @@ func CreateBlockchainTransaction(
 func createSolanaTransaction(
 	amount *big.Int,
 	wallet string,
-	blockchain models.Blockchain,
+	chain models.Blockchain,
 	inTransactions map[models.Blockchain][]*models.Transaction,
 	outTransactions map[models.Blockchain][]*models.Transaction,
 ) (*provider.UnsignedTransaction, error) {
-	inTransaction := inTransactions[blockchain]
-	alts := make([]string, 0)
-
+	inTransaction := inTransactions[chain]
 	inboundTransfers := make([]connection.BridgeInboundTransferItem, len(inTransaction))
 	for i, transaction := range inTransaction {
 		tAmount, _ := uint256.FromDecimal(transaction.SrcAmount)
@@ -53,24 +49,22 @@ func createSolanaTransaction(
 
 		if transaction.Swap != nil {
 			inboundTransfer.Swap = &connection.Swap{
-				Executor:    utils.ToByte32(transaction.Swap.Address),
+				Executor:    utils.ToByte32(transaction.Swap.Executor),
 				Command:     utils.FromHex(transaction.Swap.Command),
 				Metadata:    utils.FromHex(transaction.Swap.MetaData),
 				StableToken: utils.ToByte32(transaction.ToToken),
 			}
-
-			alts = append(alts, transaction.Swap.AddressLookup...)
 		}
 
 		inboundTransfers[i] = inboundTransfer
 	}
 
 	outboundTransfers := make([]connection.BridgeOutboundTransfer, 0, len(outTransactions))
-	for chain, transactions := range outTransactions {
+	for chainIter, transactions := range outTransactions {
 		outboundTransferItems := make([]connection.BridgeOutboundTransferItem, len(transactions))
 
 		for i, transaction := range transactions {
-			gas, _, _ := GetExecutionParams(chain, transaction.ToToken)
+			gas, _, _ := GetExecutionParams(chainIter, transaction.ToToken)
 
 			outboundTransferItem := connection.BridgeOutboundTransferItem{
 				Asset:              utils.ToByte32(transaction.ToToken),
@@ -81,7 +75,7 @@ func createSolanaTransaction(
 
 			if transaction.Swap != nil {
 				outboundTransferItem.Swap = &connection.Swap{
-					Executor:    utils.ToByte32(transaction.Swap.Address),
+					Executor:    utils.ToByte32(transaction.Swap.Executor),
 					Command:     utils.FromHex(transaction.Swap.Command),
 					Metadata:    utils.FromHex(transaction.Swap.MetaData),
 					StableToken: utils.ToByte32(transaction.FromToken),
@@ -92,7 +86,7 @@ func createSolanaTransaction(
 		}
 
 		outboundTransfers = append(outboundTransfers, connection.BridgeOutboundTransfer{
-			ChainID: chain.GetId(),
+			ChainID: chainIter.GetId(),
 			Items:   outboundTransferItems,
 		})
 	}
@@ -106,48 +100,87 @@ func createSolanaTransaction(
 	})
 	data := append(models.GetBridgeDiscriminator(), requestSerializedData...)
 
+	solanaStableCoin := models.GetDefaultStableCoins(chain)
+
 	accounts := []types.AccountMeta{
-		{PubKey: solana.PublicKeyFromString(models.GetPriceFeed()), IsSigner: false, IsWritable: false},
-		{PubKey: solana.PublicKeyFromString(models.GetGringotts(blockchain)), IsSigner: false, IsWritable: false},
+		{PubKey: solana.PublicKeyFromString(wallet), IsSigner: true, IsWritable: true},                                                                                  // user
+		{PubKey: solana.PublicKeyFromString(models.GetPriceFeed()), IsSigner: false, IsWritable: false},                                                                 // pricefeed
+		{PubKey: solana.PublicKeyFromString(models.GetGringotts(chain)), IsSigner: false, IsWritable: false},                                                            // gringotts
+		{PubKey: solana.PublicKeyFromString(models.GetVault(chain)), IsSigner: false, IsWritable: true},                                                                 // vault
+		{PubKey: solana.PublicKeyFromString(models.GetPeer(chain, chain)), IsSigner: false, IsWritable: false},                                                          // self
+		{PubKey: solana.PublicKeyFromString(models.GetAssociatedTokenAddress(models.GetGringotts(chain), solanaStableCoin.Address)), IsSigner: false, IsWritable: true}, // gringotts_stable_coin
+		{PubKey: solana.PublicKeyFromString(solanaStableCoin.Address), IsSigner: false, IsWritable: false},                                                              // mint
+		{PubKey: solana.PublicKeyFromString(models.GetJupiter()), IsSigner: false, IsWritable: false},                                                                   // swap
+		{PubKey: solana.SPLAssociatedTokenAccountProgramID, IsSigner: false, IsWritable: false},                                                                         // spl
+		{PubKey: solana.TokenProgramID, IsSigner: false, IsWritable: false},                                                                                             // token
+		{PubKey: solana.SystemProgramID, IsSigner: false, IsWritable: false},                                                                                            // system
+	}
+
+	alts := make([]string, 0)
+	for _, transaction := range inTransaction {
+		inToken := models.GetToken(chain, transaction.FromToken)
+
+		if inToken.Address == solanaStableCoin.Address {
+			accounts = append(accounts, types.AccountMeta{
+				PubKey: solana.PublicKeyFromString(models.GetAssociatedTokenAddress(wallet, solanaStableCoin.Address)), IsSigner: false, IsWritable: true,
+			})
+		} else {
+			if inToken.Address == "" {
+				accounts = append(accounts, types.AccountMeta{
+					PubKey: solana.PublicKeyFromString(models.NativeMint), IsSigner: false, IsWritable: false,
+				})
+				accounts = append(accounts, types.AccountMeta{
+					PubKey: solana.PublicKeyFromString(models.GetAssociatedTokenAddress(models.GetGringotts(chain), models.NativeMint)), IsSigner: false, IsWritable: true,
+				})
+			} else {
+				accounts = append(accounts, types.AccountMeta{
+					PubKey: solana.PublicKeyFromString(inToken.Address), IsSigner: false, IsWritable: false,
+				})
+				accounts = append(accounts, types.AccountMeta{
+					PubKey: solana.PublicKeyFromString(models.GetAssociatedTokenAddress(models.GetGringotts(chain), inToken.Address)), IsSigner: false, IsWritable: true,
+				})
+				accounts = append(accounts, types.AccountMeta{
+					PubKey: solana.PublicKeyFromString(models.GetAssociatedTokenAddress(wallet, inToken.Address)), IsSigner: false, IsWritable: true,
+				})
+			}
+
+			for _, acc := range transaction.Swap.Accounts {
+				accounts = append(accounts, types.AccountMeta{
+					PubKey: solana.PublicKeyFromString(acc.Address), IsSigner: acc.IsSigner, IsWritable: acc.IsWritable,
+				})
+			}
+			transaction.Swap.MetaData = utils.ToHex([]byte{byte(len(transaction.Swap.Accounts))})
+			alts = append(alts, transaction.Swap.AddressLookup...)
+		}
+	}
+	for chainIter := range outTransactions {
+		for _, acc := range models.GetSendAccounts(chainIter) {
+			accounts = append(accounts, types.AccountMeta{
+				PubKey: solana.PublicKeyFromString(acc.Address), IsSigner: acc.IsSigner, IsWritable: acc.IsWritable,
+			})
+		}
 	}
 
 	instruction := types.Instruction{
-		ProgramID: solana.PublicKeyFromString(blockchain.GetContract()),
+		ProgramID: solana.PublicKeyFromString(chain.GetContract()),
 		Accounts:  accounts,
 		Data:      data,
 	}
 
-	client := solanaClient.NewClient(blockchain.GetEndpoint())
+	client := blockchain2.GetSOLConnection(chain)
 	recentBlockhash, _ := client.GetLatestBlockhash(context.Background())
-
-	solanaALTs := make([]types.AddressLookupTableAccount, 0)
-	for _, alt := range alts {
-		accountInfo, err := client.GetAccountInfo(context.Background(), alt)
-		if err != nil {
-			return nil, err
-		}
-		addressLookupTable, err := address_lookup_table.DeserializeLookupTable(accountInfo.Data, accountInfo.Owner)
-		if err != nil {
-			log.Errorw("invalid alt", "err", err)
-			continue
-		}
-		solanaALTs = append(solanaALTs, types.AddressLookupTableAccount{
-			Key:       solana.PublicKeyFromString(alt),
-			Addresses: addressLookupTable.Addresses,
-		})
-	}
 
 	message := types.NewMessage(types.NewMessageParam{
 		FeePayer:                   solana.PublicKeyFromString(wallet),
 		RecentBlockhash:            recentBlockhash.Blockhash,
 		Instructions:               []types.Instruction{instruction},
-		AddressLookupTableAccounts: solanaALTs,
+		AddressLookupTableAccounts: blockchain2.GetALT(chain, alts),
 	})
 
 	tx, _ := message.Serialize()
 
 	return &provider.UnsignedTransaction{
-		Contract: blockchain.GetContract(),
+		Contract: chain.GetContract(),
 		Data:     tx,
 	}, nil
 }
@@ -171,7 +204,7 @@ func createEVMTransaction(
 
 		if transaction.Swap != nil {
 			transactionItem.Swap = connection.GringottsSwap{
-				Executor:    utils.ToByte32(transaction.Swap.Address),
+				Executor:    utils.ToByte32(transaction.Swap.Executor),
 				Command:     utils.FromHex(transaction.Swap.Command),
 				Metadata:    utils.FromHex(transaction.Swap.MetaData),
 				StableToken: utils.ToByte32(transaction.ToToken),
@@ -201,7 +234,7 @@ func createEVMTransaction(
 
 			if transaction.Swap != nil {
 				transactionItem.Swap = connection.GringottsSwap{
-					Executor:    utils.ToByte32(transaction.Swap.Address),
+					Executor:    utils.ToByte32(transaction.Swap.Executor),
 					Command:     utils.FromHex(transaction.Swap.Command),
 					Metadata:    utils.FromHex(transaction.Swap.MetaData),
 					StableToken: utils.ToByte32(transaction.FromToken),

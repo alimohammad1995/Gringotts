@@ -7,10 +7,11 @@ import (
 type Side int
 
 type Swap struct {
-	Address       string   `json:"address"`
-	Command       string   `json:"command"`
-	MetaData      string   `json:"metadata"`
-	AddressLookup []string `json:"addressLookup"`
+	Executor      string    `json:"executor"`
+	Command       string    `json:"command"`
+	MetaData      string    `json:"metadata"`
+	Accounts      []Account `json:"accounts"`
+	AddressLookup []string  `json:"addressLookup"`
 }
 
 type Transaction struct {

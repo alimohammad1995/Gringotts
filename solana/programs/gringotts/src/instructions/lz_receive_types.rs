@@ -29,14 +29,7 @@ impl LzReceiveTypes<'_> {
             ctx.program_id,
         );
 
-        let (vault, _) = Pubkey::find_program_address(&[VAULT_SEED], ctx.program_id);
-
         let mut accounts = vec![
-            LzAccount {
-                pubkey: gringotts.key(),
-                is_signer: false,
-                is_writable: false,
-            },
             LzAccount {
                 pubkey: self_peer,
                 is_signer: false,
@@ -47,52 +40,32 @@ impl LzReceiveTypes<'_> {
                 is_signer: false,
                 is_writable: false,
             },
-            LzAccount {
-                pubkey: vault,
-                is_signer: false,
-                is_writable: true,
-            },
-            LzAccount {
-                pubkey: AssociatedToken::id(),
-                is_signer: false,
-                is_writable: false,
-            },
-            LzAccount {
-                pubkey: Token::id(),
-                is_signer: false,
-                is_writable: false,
-            },
-            LzAccount {
-                pubkey: System::id(),
-                is_signer: false,
-                is_writable: false,
-            },
         ];
 
         let message = Message::decode(params.message.as_slice());
 
         if message.header == CHAIN_TRANSFER_TYPE {
-            let chain_transfer = ChainTransfer::decode(message.payload.as_slice());
+            let chain_transfer = ChainTransfer::decode(message.payload);
 
             for item in &chain_transfer.items {
-                let recipient = Pubkey::new_from_array(item.recipient);
+                let recipient = Pubkey::new_from_array(*item.recipient);
 
                 accounts.push(LzAccount {
                     pubkey: recipient,
                     is_signer: false,
                     is_writable: true,
-                });
+                }); //XXXX
 
-                if item.executor == [0; 32] {
+                if *item.executor == [0; 32] {
                     accounts.push(LzAccount {
-                        pubkey: Pubkey::new_from_array(item.asset),
+                        pubkey: Pubkey::new_from_array(*item.asset),
                         is_signer: false,
                         is_writable: false,
                     });
                     accounts.push(LzAccount {
                         pubkey: associated_token::get_associated_token_address(
                             &recipient,
-                            &Pubkey::new_from_array(item.asset),
+                            &Pubkey::new_from_array(*item.asset),
                         ),
                         is_signer: false,
                         is_writable: true,
@@ -100,22 +73,22 @@ impl LzReceiveTypes<'_> {
                     accounts.push(LzAccount {
                         pubkey: associated_token::get_associated_token_address(
                             &gringotts.key(),
-                            &Pubkey::new_from_array(item.asset),
+                            &Pubkey::new_from_array(*item.asset),
                         ),
                         is_signer: false,
                         is_writable: true,
                     });
                 } else {
-                    if item.asset != [0; 32] {
+                    if *item.asset != [0; 32] {
                         accounts.push(LzAccount {
-                            pubkey: Pubkey::new_from_array(item.asset),
+                            pubkey: Pubkey::new_from_array(*item.asset),
                             is_signer: false,
                             is_writable: false,
                         });
                         accounts.push(LzAccount {
                             pubkey: associated_token::get_associated_token_address(
                                 &recipient,
-                                &Pubkey::new_from_array(item.asset),
+                                &Pubkey::new_from_array(*item.asset),
                             ),
                             is_signer: false,
                             is_writable: true,
@@ -125,7 +98,7 @@ impl LzReceiveTypes<'_> {
                             pubkey: NATIVE_MINT,
                             is_signer: false,
                             is_writable: false,
-                        });
+                        }); //XXXX
                         accounts.push(LzAccount {
                             pubkey: associated_token::get_associated_token_address(
                                 &gringotts.key(),
@@ -133,35 +106,35 @@ impl LzReceiveTypes<'_> {
                             ),
                             is_signer: false,
                             is_writable: true,
-                        });
+                        }); //XXXX
                     }
 
                     accounts.push(LzAccount {
-                        pubkey: Pubkey::new_from_array(item.executor),
+                        pubkey: Pubkey::new_from_array(*item.executor),
                         is_signer: false,
                         is_writable: false,
-                    });
+                    }); //XXXX
                     accounts.push(LzAccount {
-                        pubkey: Pubkey::new_from_array(item.stable_token),
+                        pubkey: Pubkey::new_from_array(*item.stable_token),
                         is_signer: false,
                         is_writable: false,
-                    });
+                    }); //XXXX
                     accounts.push(LzAccount {
                         pubkey: associated_token::get_associated_token_address(
                             &gringotts.key(),
-                            &Pubkey::new_from_array(item.stable_token),
+                            &Pubkey::new_from_array(*item.stable_token),
                         ),
                         is_signer: false,
                         is_writable: true,
-                    });
+                    }); //XXXX
                     accounts.push(LzAccount {
                         pubkey: associated_token::get_associated_token_address(
                             &recipient.key(),
-                            &Pubkey::new_from_array(item.stable_token),
+                            &Pubkey::new_from_array(*item.stable_token),
                         ),
                         is_signer: false,
                         is_writable: true,
-                    });
+                    }); //XXXX
 
                     let swap_accounts_len = item.metadata[0] as usize;
                     let mut m_index = 1;
@@ -188,6 +161,7 @@ impl LzReceiveTypes<'_> {
             &params.sender,
             params.nonce,
         );
+
         accounts.extend(accounts_for_clear);
 
         Ok(accounts)

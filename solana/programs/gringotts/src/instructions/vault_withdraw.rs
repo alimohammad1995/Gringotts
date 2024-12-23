@@ -7,7 +7,7 @@ use anchor_lang::{system_program, Accounts, AnchorDeserialize, AnchorSerialize};
 
 #[derive(Accounts)]
 pub struct VaultWithdraw<'info> {
-    #[account( seeds = [b"Gringotts"], bump, has_one = owner)]
+    #[account(has_one = owner, seeds = [GRINGOTTS_SEED], bump = gringotts.bump)]
     pub gringotts: Account<'info, Gringotts>,
     pub owner: Signer<'info>,
 

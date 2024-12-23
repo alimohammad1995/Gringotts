@@ -9,7 +9,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount, Transfer};
 
 #[derive(Accounts)]
 pub struct TokenWithdraw<'info> {
-    #[account( seeds = [b"Gringotts"], bump, has_one = owner)]
+    #[account(has_one = owner, seeds = [GRINGOTTS_SEED], bump = gringotts.bump)]
     pub gringotts: Account<'info, Gringotts>,
     #[account( mut)]
     pub owner: Signer<'info>,

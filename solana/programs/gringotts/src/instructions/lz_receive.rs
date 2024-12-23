@@ -8,12 +8,11 @@ use anchor_spl::{associated_token, token};
 use oapp::endpoint::cpi::accounts::Clear;
 use oapp::endpoint::instructions::ClearParams;
 use oapp::endpoint::ConstructCPIContext;
+use std::fmt::Pointer;
 
 #[derive(Accounts)]
 #[instruction(params: LzReceiveParams)]
 pub struct LzReceive<'info> {
-    #[account(seeds = [GRINGOTTS_SEED], bump = gringotts.bump)]
-    pub gringotts: Account<'info, Gringotts>,
     #[account(
         seeds = [PEER_SEED, &gringotts.lz_eid.to_le_bytes()], bump = self_peer.bump,
     )]
@@ -24,6 +23,8 @@ pub struct LzReceive<'info> {
     )]
     pub peer: Account<'info, Peer>,
 
+    #[account(seeds = [GRINGOTTS_SEED], bump = gringotts.bump)]
+    pub gringotts: Account<'info, Gringotts>,
     #[account(mut, seeds = [VAULT_SEED], bump)]
     pub vault: SystemAccount<'info>,
 
@@ -41,11 +42,13 @@ impl<'info> LzReceive<'info> {
         let signer_seeds = &[seeds];
 
         let gringotts = &ctx.accounts.gringotts;
+
         let self_peer = &ctx.accounts.self_peer;
         let peer = &ctx.accounts.peer;
 
         let vault = &ctx.accounts.vault;
         let vault_bump = ctx.bumps.vault;
+
         let remaining_accounts = ctx.remaining_accounts;
 
         let system_program = &ctx.accounts.system_program;
@@ -57,20 +60,20 @@ impl<'info> LzReceive<'info> {
         let message = Message::decode(params.message.as_slice());
 
         if message.header == CHAIN_TRANSFER_TYPE {
-            let chain_transfer = ChainTransfer::decode(message.payload.as_slice());
+            let chain_transfer = ChainTransfer::decode(message.payload);
 
             for item in &chain_transfer.items {
                 let recipient = &remaining_accounts[r];
                 let mint: &Account<Mint> = &Account::try_from(&remaining_accounts[r + 1])?;
-                let recipient_token_account = &remaining_accounts[r + 2];
+                let recipient_or_gringotts_token_account = &remaining_accounts[r + 2];
 
                 require!(
-                    item.asset == mint.key().to_bytes(),
+                    *item.asset == mint.key().to_bytes(),
                     LzReceiveErrorCode::InvalidParams
                 );
 
                 init_token_account_if_needed(
-                    recipient_token_account,
+                    recipient_or_gringotts_token_account,
                     recipient,
                     mint,
                     vault,
@@ -89,7 +92,7 @@ impl<'info> LzReceive<'info> {
                         token_program.to_account_info(),
                         Transfer {
                             from: gringotts_stable_coin.to_account_info(),
-                            to: recipient_token_account.to_account_info(),
+                            to: recipient_or_gringotts_token_account.to_account_info(),
                             authority: gringotts.to_account_info(),
                         },
                         signer_seeds,
@@ -115,7 +118,7 @@ impl<'info> LzReceive<'info> {
                         gringotts,
                         swap_program,
                         &remaining_accounts[r..r + swap_account_counts],
-                        item.command.clone(),
+                        item.command.to_vec(),
                     );
 
                     r = r + swap_account_counts;
@@ -129,10 +132,10 @@ impl<'info> LzReceive<'info> {
                             LzReceiveErrorCode::InvalidParams
                         );
 
-                        if item.asset == [0; 32] {
+                        if *item.asset == [0; 32] {
                             close_wsol_token(
                                 gringotts,
-                                recipient_token_account,
+                                recipient_or_gringotts_token_account,
                                 recipient,
                                 token_program,
                             )?;

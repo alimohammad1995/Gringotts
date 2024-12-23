@@ -206,9 +206,9 @@ impl<'info> Bridge<'info> {
 
                 let item = EstimateOutboundTransferItem {
                     asset: params.outbounds[i].items[j].asset,
-                    execution_gas_amount: params.outbounds[i].items[j].execution_gas_amount,
-                    execution_command_length: command_length,
-                    execution_metadata_length: metadata_length,
+                    execution_gas: params.outbounds[i].items[j].execution_gas,
+                    command_length: command_length,
+                    metadata_length: metadata_length,
                 };
 
                 items.push(item);
@@ -217,6 +217,7 @@ impl<'info> Bridge<'info> {
             estimate_outbounds.push(EstimateOutboundTransfer {
                 chain_id: params.outbounds[i].chain_id,
                 items: items,
+                metadata_length: 0,
             });
 
             let mut data = &remaining_accounts[r + i].try_borrow_data()?[..];
@@ -242,7 +243,7 @@ impl<'info> Bridge<'info> {
             true,
         )?;
 
-        net_usdx = net_usdx - estimate_result.transfer_gas_price_usdx;
+        net_usdx = net_usdx - estimate_result.transfer_gas_usdx;
         net_usdx = net_usdx - estimate_result.commission_usdx;
 
         /*********** [Send transfers] ***********/
@@ -259,47 +260,49 @@ impl<'info> Bridge<'info> {
                     params.outbounds[i].items[j].distribution_bp as u32,
                 );
 
-                let mut executor = [0; 32];
-                let mut stable_token = [0; 32];
-                let mut command: Vec<u8> = Vec::new();
-                let mut metadata: Vec<u8> = Vec::new();
-
                 if let Some(swap) = params.outbounds[i].items[j].swap.as_ref() {
-                    executor = swap.executor;
-                    stable_token = swap.stable_token;
-                    command = swap.command.clone();
-                    metadata = swap.metadata.clone();
+                    chain_transfers.push(ChainTransferItem {
+                        amount_usdx: amount_usdx,
+                        asset: &params.outbounds[i].items[j].asset,
+                        recipient: &params.outbounds[i].items[j].recipient,
+                        executor: &swap.executor,
+                        stable_token: &swap.stable_token,
+                        command: swap.command.as_slice(),
+                        metadata: swap.metadata.as_slice(),
+                    });
+                } else {
+                    chain_transfers.push(ChainTransferItem {
+                        amount_usdx: amount_usdx,
+                        asset: &params.outbounds[i].items[j].asset,
+                        recipient: &params.outbounds[i].items[j].recipient,
+                        executor: &[0; 32],
+                        stable_token: &[0; 32],
+                        command: &[],
+                        metadata: &[],
+                    });
                 }
-
-                chain_transfers.push(ChainTransferItem {
-                    amount_usdx: amount_usdx,
-                    asset: params.outbounds[i].items[j].asset,
-                    recipient: params.outbounds[i].items[j].recipient,
-                    executor: executor,
-                    stable_token: stable_token,
-                    command: command,
-                    metadata: metadata,
-                });
             }
 
             let chain_transfer = ChainTransfer {
                 items: chain_transfers,
+                metadata: params.outbounds[i].metadata.as_slice(),
             };
 
             let mut builder = OptionsBuilder::new();
             builder.add_executor_lz_receive_option(
-                estimate_result.outbound_metadata[i].execution_gas_amount,
+                estimate_result.outbound_details[i].execution_gas,
                 0,
             );
 
-            let message = Message::new(CHAIN_TRANSFER_TYPE, chain_transfer.encode());
+            let encoded_chain_transfer = chain_transfer.encode();
+            let message = Message::new(CHAIN_TRANSFER_TYPE, encoded_chain_transfer.as_slice());
 
             let send_params = SendParams {
                 dst_eid: peers[i].lz_eid,
                 receiver: peers[i].address,
                 message: message.encode(),
                 options: builder.options(),
-                native_fee: estimate_result.outbound_metadata[i].transfer_gas_amount * 2,
+                native_fee: estimate_result.outbound_details[i].transfer_gas * 2,
                 lz_token_fee: 0,
             };
 
@@ -350,10 +353,10 @@ pub fn swap_on_jupiter<'info>(
         })
         .collect();
 
-    let accounts_infos: Vec<AccountInfo> = remaining_accounts
-        .iter()
-        .map(|acc| AccountInfo { ..acc.clone() })
-        .collect();
+    // let accounts_infos: Vec<AccountInfo> = remaining_accounts
+    //     .iter()
+    //     .map(|acc| AccountInfo { ..acc.clone() })
+    //     .collect();
 
     let seeds = &[GRINGOTTS_SEED, &[gringotts.bump]];
     let signer_seeds = &[&seeds[..]];
@@ -364,7 +367,7 @@ pub fn swap_on_jupiter<'info>(
             accounts,
             data,
         },
-        &accounts_infos,
+        remaining_accounts,
         signer_seeds,
     )
 }
@@ -427,7 +430,7 @@ pub struct BridgeInboundTransfer {
 pub struct BridgeOutboundTransferItem {
     pub asset: [u8; 32],
     pub recipient: [u8; 32],
-    pub execution_gas_amount: u64,
+    pub execution_gas: u64,
     pub distribution_bp: u16,
     pub swap: Option<Swap>,
 }
@@ -435,6 +438,7 @@ pub struct BridgeOutboundTransferItem {
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct BridgeOutboundTransfer {
     pub chain_id: u8,
+    pub metadata: Vec<u8>,
     pub items: Vec<BridgeOutboundTransferItem>,
 }
 

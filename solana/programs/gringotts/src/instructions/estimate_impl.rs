@@ -1,9 +1,9 @@
 use crate::instructions::{
-    EstimateErrorCode, EstimateOutboundMetadata, EstimateRequest, EstimateResponse,
+    EstimateErrorCode, EstimateOutboundDetails, EstimateRequest, EstimateResponse,
 };
 use crate::msg_codec::{ChainTransfer, ChainTransferItem, Message, CHAIN_TRANSFER_TYPE};
 use crate::state::{Gringotts, Peer};
-use crate::utils::{change_decimals, micro_bps, OptionsBuilder};
+use crate::utils::{bps, change_decimals, micro_bps, OptionsBuilder};
 use crate::{CHAIN_TRANSFER_DECIMALS, MAX_PRICE_AGE, MAX_TRANSFERS, NETWORK_DECIMALS};
 use anchor_lang::prelude::{Account, AccountInfo, Clock, Result, SolanaSysvar};
 use anchor_lang::{require, Key};
@@ -36,33 +36,45 @@ pub fn estimate_marketplace(
         );
 
         let mut chain_execution_gas_price = peer.base_gas_estimate;
+
         let mut chain_transfer_items = Vec::with_capacity(outbound.items.len());
+
+        let mut command_storage = Vec::new();
+        let mut metadata_storage = Vec::new();
+        for j in 0usize..outbound.items.len() {
+            let item = &outbound.items[j];
+            command_storage.push(vec![0u8; item.command_length as usize]);
+            metadata_storage.push(vec![0u8; item.metadata_length as usize]);
+        }
 
         for j in 0usize..outbound.items.len() {
             let item = &outbound.items[j];
 
             chain_transfer_items.push(ChainTransferItem {
                 amount_usdx: 0,
-                asset: [0; 32],
-                recipient: [0; 32],
-                executor: [0; 32],
-                stable_token: [0; 32],
-                command: vec![0; item.execution_command_length as usize],
-                metadata: vec![0; item.execution_metadata_length as usize],
+                asset: &[0; 32],
+                recipient: &[0; 32],
+                executor: &[0; 32],
+                stable_token: &[0; 32],
+                command: command_storage[j].as_slice(),
+                metadata: command_storage[j].as_slice(),
             });
 
-            chain_execution_gas_price = chain_execution_gas_price + item.execution_gas_amount;
+            chain_execution_gas_price = chain_execution_gas_price + item.execution_gas;
             total_transfers += 1;
         }
 
         let mut builder = OptionsBuilder::new();
         builder.add_executor_lz_receive_option(chain_execution_gas_price, 0);
 
+        let metadata = vec![0u8; outbound.metadata_length as usize];
         let chain_transfer = ChainTransfer {
             items: chain_transfer_items,
+            metadata: metadata.as_slice(),
         };
 
-        let message = Message::new(CHAIN_TRANSFER_TYPE, chain_transfer.encode());
+        let encoded_chain_transfer = chain_transfer.encode();
+        let message = Message::new(CHAIN_TRANSFER_TYPE, encoded_chain_transfer.as_slice());
 
         let quote_params = QuoteParams {
             sender: gringotts.key(),
@@ -90,17 +102,17 @@ pub fn estimate_marketplace(
             quote_params,
         )?;
 
-        outbound_metadata.push(EstimateOutboundMetadata {
+        outbound_metadata.push(EstimateOutboundDetails {
             chain_id: outbound.chain_id,
-            execution_gas_amount: chain_execution_gas_price,
-            execution_gas_amount_usdx: get_native_price(
+            execution_gas: chain_execution_gas_price,
+            execution_gas_usdx: get_native_price(
                 chain_execution_gas_price,
                 CHAIN_TRANSFER_DECIMALS,
                 gringotts.pyth_price_feed_id,
                 &price_feed,
             )?,
-            transfer_gas_amount: quote.native_fee,
-            transfer_gas_amount_usdx: get_native_price(
+            transfer_gas: quote.native_fee,
+            transfer_gas_usdx: get_native_price(
                 quote.native_fee,
                 CHAIN_TRANSFER_DECIMALS,
                 gringotts.pyth_price_feed_id,
@@ -116,24 +128,23 @@ pub fn estimate_marketplace(
         EstimateErrorCode::InvalidParams
     );
 
-    let commission_usd = micro_bps(request.inbound.amount_usdx, gringotts.commission_micro_bps);
-    let transfer_gas_price_usd = get_native_price(
-        total_transfer_gas_price,
-        CHAIN_TRANSFER_DECIMALS,
-        gringotts.pyth_price_feed_id,
-        &price_feed,
-    )?;
+    let commission_usdx = micro_bps(request.inbound.amount_usdx, gringotts.commission_micro_bps);
+    let transfer_gas_usdx = get_native_price(total_transfer_gas_price, CHAIN_TRANSFER_DECIMALS, gringotts.pyth_price_feed_id, &price_feed)?;
+
+    let commission_discount_usdx = bps(commission_usdx, gringotts.commission_discount_bps);
+    let transfer_gas_discount_usdx = bps(transfer_gas_usdx, gringotts.gas_discount_bps);
 
     require!(
-        request.inbound.amount_usdx > commission_usd + transfer_gas_price_usd,
+        request.inbound.amount_usdx >= (commission_usdx + transfer_gas_usdx) - (commission_discount_usdx + transfer_gas_discount_usdx),
         EstimateErrorCode::InvalidParams
     );
 
     Ok(EstimateResponse {
-        commission_usdx: commission_usd,
-        transfer_gas_amount: total_transfer_gas_price,
-        transfer_gas_price_usdx: transfer_gas_price_usd,
-        outbound_metadata,
+        commission_usdx: commission_usdx,
+        commission_discount_usdx: commission_discount_usdx,
+        transfer_gas_usdx: transfer_gas_usdx,
+        transfer_gas_discount_usdx: transfer_gas_discount_usdx,
+        outbound_details: outbound_metadata,
     })
 }
 

@@ -5,9 +5,12 @@ import (
 	"github.com/btcsuite/btcutil/base58"
 	"github.com/go-resty/resty/v2"
 	"github.com/holiman/uint256"
+	"gringotts/models"
 	"gringotts/utils"
 	"strconv"
 )
+
+const MaxAccounts = 10
 
 type Jupiter struct {
 }
@@ -27,10 +30,35 @@ func (o *Jupiter) GetSwap(params *SwapParams) (*Swap, error) {
 	swapInstruction := swapRes["swapInstruction"].(map[string]interface{})
 
 	swapAccounts := swapInstruction["accounts"].([]interface{})
-	swapData, _ := base64.StdEncoding.DecodeString(swapInstruction["data"].(string))
+	swapCommand, _ := base64.StdEncoding.DecodeString(swapInstruction["data"].(string))
 
+	outAmount, _ := strconv.ParseFloat(quoteRes["outAmount"].(string), 64)
+	outAmountMin, _ := strconv.ParseFloat(quoteRes["otherAmountThreshold"].(string), 64)
+
+	alts := make([]string, 0, len(swapRes["addressLookupTableAddresses"].([]interface{})))
+	for _, alt := range swapRes["addressLookupTableAddresses"].([]interface{}) {
+		alts = append(alts, alt.(string))
+	}
+
+	accounts, metadata := o.createMeta(params.Chain, swapAccounts)
+
+	return &Swap{
+		ExecutorAddress: JupiterAddress,
+		Command:         utils.ToHex(swapCommand),
+		Metadata:        utils.ToHex(metadata),
+		OutAmount:       uint256.NewInt(uint64(outAmount)),
+		MinOutAmount:    uint256.NewInt(uint64(outAmountMin)),
+		AddressLookup:   alts,
+		Accounts:        accounts,
+	}, nil
+}
+
+func (o *Jupiter) createMeta(chain models.Blockchain, swapAccounts []interface{}) ([]Account, []byte) {
 	metadata := []byte{byte(len(swapAccounts))}
-	var accounts []Account
+	accounts := []Account{
+		{Address: models.GetGringotts(chain), IsSigner: false, IsWriteable: false},
+		{Address: models.GetVault(chain), IsSigner: false, IsWriteable: false},
+	}
 
 	for _, swapAccount := range swapAccounts {
 		pubkey := swapAccount.(map[string]interface{})["pubkey"].(string)
@@ -48,30 +76,13 @@ func (o *Jupiter) GetSwap(params *SwapParams) (*Swap, error) {
 		accounts = append(accounts, Account{Address: pubkey, IsSigner: false, IsWriteable: isWriteable})
 	}
 
-	alts := make([]string, 0, len(swapRes["addressLookupTableAddresses"].([]interface{})))
-	for _, alt := range swapRes["addressLookupTableAddresses"].([]interface{}) {
-		alts = append(alts, alt.(string))
-	}
-
-	outAmount, _ := strconv.ParseFloat(quoteRes["outAmount"].(string), 64)
-	outAmountMin, _ := strconv.ParseFloat(quoteRes["otherAmountThreshold"].(string), 64)
-
-	return &Swap{
-		ExecutorAddress: JupiterAddress,
-		Command:         utils.ToHex(swapData),
-		Metadata:        utils.ToHex(metadata),
-		OutAmount:       uint256.NewInt(uint64(outAmount)),
-		MinOutAmount:    uint256.NewInt(uint64(outAmountMin)),
-		AddressLookup:   alts,
-		Accounts:        accounts,
-	}, nil
+	return accounts, metadata
 }
 
 func (o *Jupiter) swap(quoteResponse map[string]interface{}, recipient string) map[string]interface{} {
 	body := map[string]interface{}{
-		"quoteResponse":    quoteResponse,
-		"userPublicKey":    recipient,
-		"wrapAndUnwrapSol": true,
+		"quoteResponse": quoteResponse,
+		"userPublicKey": recipient,
 	}
 
 	var result map[string]interface{}
@@ -101,7 +112,7 @@ func (o *Jupiter) quote(from string, to string, amount *uint256.Int, slippageBPS
 		"amount":                     amount.String(),
 		"restrictIntermediateTokens": strconv.FormatBool(true),
 		"slippageBps":                strconv.FormatInt(int64(slippageBPS), 10),
-		"maxAccounts":                strconv.FormatInt(20, 10),
+		"maxAccounts":                strconv.FormatInt(MaxAccounts, 10),
 	}
 
 	var result map[string]interface{}

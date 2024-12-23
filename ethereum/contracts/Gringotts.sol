@@ -16,9 +16,10 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
+contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausable {
     uint8 private constant CHAIN_TRANSFER_DECIMALS = 6;
     uint8 private constant MAX_TRANSFER = 8;
     uint16 private constant MAX_DEX_COMMAND = 2 * 1024;
@@ -61,13 +62,14 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
     struct BridgeOutboundTransferItem {
         GringottsAddress asset;
         GringottsAddress recipient;
-        uint256 executionGasAmount;
+        uint256 executionGas;
         uint16 distributionBP;
         Swap swap;
     }
 
     struct BridgeOutboundTransfer {
         ChainId chainId;
+        bytes metadata;
         BridgeOutboundTransferItem[] items;
     }
 
@@ -82,7 +84,7 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
 
     function bridge(
         BridgeRequest memory _params
-    ) external onlyNotBlocked payable returns (BridgeResponse memory) {
+    ) external onlyNotBlocked whenNotPaused payable returns (BridgeResponse memory) {
         validateBridge(_params);
 
         Peer memory self = gringottsAgents[chainId];
@@ -149,14 +151,15 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
             for (uint256 j = 0; j < bridgeOutbound.items.length; j++) {
                 items[j] = EstimateOutboundTransferItem({
                     asset: bridgeOutbound.items[i].asset,
-                    executionGasAmount: bridgeOutbound.items[i].executionGasAmount,
-                    executionCommandLength: uint16(bridgeOutbound.items[i].swap.command.length),
-                    executionMetadataLength: uint16(bridgeOutbound.items[i].swap.metadata.length)
+                    executionGas: bridgeOutbound.items[i].executionGas,
+                    commandLength: uint16(bridgeOutbound.items[i].swap.command.length),
+                    metadataLength: uint16(bridgeOutbound.items[i].swap.metadata.length)
                 });
             }
 
             estimateOutbounds[i] = EstimateOutboundTransfer({
                 chainId: bridgeOutbound.chainId,
+                metadataLength: uint16(bridgeOutbound.metadata.length),
                 items: items
             });
         }
@@ -170,9 +173,10 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
 
         EstimateResponse memory estimateResult = estimate(estimateRequest);
 
-        netUSDX = netUSDX - estimateResult.transferGasAmountUSDX;
-        netUSDX = netUSDX - estimateResult.commissionUSDX;
-        EstimateOutboundMetadata[] memory outboundMetaData = estimateResult.outboundMetadata;
+        netUSDX = netUSDX - (estimateResult.transferGasUSDX + estimateResult.commissionUSDX);
+        netUSDX = netUSDX + (estimateResult.transferGasDiscountUSDX + estimateResult.commissionDiscountUSDX);
+
+        EstimateOutboundDetails[] memory outboundMetaData = estimateResult.outboundDetails;
 
         /*********** [Send transfers] ***********/
         string[] memory messageIds = new string[](_params.outbounds.length);
@@ -200,14 +204,16 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
             }
 
             ChainTransfer memory chainTransfer = ChainTransfer({
-                items: items
+                items: items,
+                metadata: bridgeOutbound.metadata
             });
 
             messageIds[i] = send(
                 bridgeOutbound.chainId,
                 MessageTypeChainTransfer,
                 ChainTransferLibrary.encode(chainTransfer),
-                uint128(outboundMetaData[i].executionGasAmount)
+                uint128(outboundMetaData[i].executionGas),
+                uint128(outboundMetaData[i].transferGas)
             );
 
             emit SendChainTransferEvent(
@@ -287,13 +293,14 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
 
     struct EstimateOutboundTransferItem {
         GringottsAddress asset;
-        uint256 executionGasAmount;
-        uint16 executionCommandLength;
-        uint16 executionMetadataLength;
+        uint256 executionGas;
+        uint16 commandLength;
+        uint16 metadataLength;
     }
 
     struct EstimateOutboundTransfer {
         ChainId chainId;
+        uint16 metadataLength;
         EstimateOutboundTransferItem[] items;
     }
 
@@ -302,19 +309,22 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
         EstimateOutboundTransfer[] outbounds;
     }
 
-    struct EstimateOutboundMetadata {
+    struct EstimateOutboundDetails {
         ChainId chainId;
-        uint256 executionGasAmount;
-        uint256 executionGasAmountUSDX;
-        uint256 transferGasAmount;
-        uint256 transferGasAmountUSDX;
+
+        uint256 executionGas;
+        uint256 executionGasUSDX;
+        uint256 transferGas;
+        uint256 transferGasUSDX;
     }
 
     struct EstimateResponse {
         uint256 commissionUSDX;
-        uint256 transferGasAmount;
-        uint256 transferGasAmountUSDX;
-        EstimateOutboundMetadata[] outboundMetadata;
+        uint256 commissionDiscountUSDX;
+        uint256 transferGasUSDX;
+        uint256 transferGasDiscountUSDX;
+
+        EstimateOutboundDetails[] outboundDetails;
     }
 
     function estimate(
@@ -322,7 +332,7 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
     ) public view returns (EstimateResponse memory) {
         uint256 totalTransferGasPrice = 0;
 
-        EstimateOutboundMetadata[] memory outboundMetadata = new EstimateOutboundMetadata[](_params.outbounds.length);
+        EstimateOutboundDetails[] memory outboundDetails = new EstimateOutboundDetails[](_params.outbounds.length);
         uint8 totalTransfers = 0;
 
         for (uint256 i = 0; i < _params.outbounds.length; i++) {
@@ -345,16 +355,17 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
                     recipient: GringottsAddress.wrap(bytes32(0)),
                     executor: GringottsAddress.wrap(bytes32(0)),
                     stableToken: GringottsAddress.wrap(bytes32(0)),
-                    command: new bytes(item.executionCommandLength),
-                    metadata: new bytes(item.executionMetadataLength)
+                    command: new bytes(item.commandLength),
+                    metadata: new bytes(item.metadataLength)
                 });
 
-                chainExecutionGasPrice = chainExecutionGasPrice + item.executionGasAmount;
+                chainExecutionGasPrice = chainExecutionGasPrice + item.executionGas;
                 totalTransfers++;
             }
 
             ChainTransfer memory chainTransfer = ChainTransfer({
-                items: chainTransferItems
+                items: chainTransferItems,
+                metadata: new bytes(outbound.metadataLength)
             });
 
             uint256 transferGasPrice = quote(
@@ -364,12 +375,12 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
                 uint128(chainExecutionGasPrice)
             );
 
-            outboundMetadata[i] = EstimateOutboundMetadata({
+            outboundDetails[i] = EstimateOutboundDetails({
                 chainId: outbound.chainId,
-                executionGasAmount: chainExecutionGasPrice,
-                executionGasAmountUSDX: getNativePriceUSD(chainExecutionGasPrice, CHAIN_TRANSFER_DECIMALS),
-                transferGasAmount: transferGasPrice,
-                transferGasAmountUSDX: getNativePriceUSD(transferGasPrice, CHAIN_TRANSFER_DECIMALS)
+                executionGas: chainExecutionGasPrice,
+                executionGasUSDX: getNativePriceUSD(chainExecutionGasPrice, CHAIN_TRANSFER_DECIMALS),
+                transferGas: transferGasPrice,
+                transferGasUSDX: getNativePriceUSD(transferGasPrice, CHAIN_TRANSFER_DECIMALS)
             });
 
             totalTransferGasPrice = totalTransferGasPrice + transferGasPrice;
@@ -378,16 +389,19 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
         require(totalTransfers <= MAX_TRANSFER, "Too many transfers");
 
         uint256 commissionUSDX = MathUtils.microBPS(_params.inbound.amountUSDX, config.commissionMicroBPS);
-        uint256 totalTransferGasPriceUSDX = getNativePriceUSD(totalTransferGasPrice, CHAIN_TRANSFER_DECIMALS);
+        uint256 transferGasUSDX = getNativePriceUSD(totalTransferGasPrice, CHAIN_TRANSFER_DECIMALS);
 
-        require(_params.inbound.amountUSDX >= commissionUSDX + totalTransferGasPriceUSDX, "Invalid amount");
+        uint256 commissionDiscountUSDX = MathUtils.bps(commissionUSDX, config.commissionDiscountBPS);
+        uint256 transferGasDiscountUSDX = MathUtils.bps(transferGasUSDX, config.gasDiscountBPS);
 
-        return
-            EstimateResponse({
+        require(_params.inbound.amountUSDX >= (commissionUSDX + transferGasUSDX) - (commissionDiscountUSDX + transferGasDiscountUSDX), "Invalid amount");
+
+        return EstimateResponse({
             commissionUSDX: commissionUSDX,
-            transferGasAmount: totalTransferGasPrice,
-            transferGasAmountUSDX: totalTransferGasPriceUSDX,
-            outboundMetadata: outboundMetadata
+            commissionDiscountUSDX: commissionDiscountUSDX,
+            transferGasUSDX: transferGasUSDX,
+            transferGasDiscountUSDX: transferGasDiscountUSDX,
+            outboundDetails: outboundDetails
         });
     }
 
@@ -397,6 +411,8 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
         uint8 _header,
         bytes memory _message
     ) internal override {
+        _requireNotPaused();
+
         if (_header == MessageTypeChainTransfer) {
             ChainTransfer memory transfer = ChainTransferLibrary.decode(_message);
             Peer memory self = gringottsAgents[chainId];
@@ -461,5 +477,13 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market {
     function setConfig(Config calldata _config) external onlyOwner {
         require(_config.commissionMicroBPS > 0, "Invalid commission");
         config = _config;
+    }
+
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }

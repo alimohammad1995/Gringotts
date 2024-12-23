@@ -28,7 +28,7 @@ impl Estimate<'_> {
 
         require!(
             params.inbound.amount_usdx
-                >= estimate_result.commission_usdx + estimate_result.transfer_gas_price_usdx,
+                >= estimate_result.commission_usdx + estimate_result.transfer_gas_usdx,
             EstimateErrorCode::InvalidParams
         );
 
@@ -59,14 +59,15 @@ pub struct EstimateInboundTransfer {
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct EstimateOutboundTransferItem {
     pub asset: [u8; 32],
-    pub execution_gas_amount: u64,
-    pub execution_command_length: u16,
-    pub execution_metadata_length: u16,
+    pub execution_gas: u64,
+    pub command_length: u16,
+    pub metadata_length: u16,
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct EstimateOutboundTransfer {
     pub chain_id: u8,
+    pub metadata_length: u16,
     pub items: Vec<EstimateOutboundTransferItem>,
 }
 
@@ -77,20 +78,21 @@ pub struct EstimateRequest {
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
-pub struct EstimateOutboundMetadata {
+pub struct EstimateOutboundDetails {
     pub chain_id: u8,
-    pub execution_gas_amount: u64,
-    pub execution_gas_amount_usdx: u64,
-    pub transfer_gas_amount: u64,
-    pub transfer_gas_amount_usdx: u64,
+    pub execution_gas: u64,
+    pub execution_gas_usdx: u64,
+    pub transfer_gas: u64,
+    pub transfer_gas_usdx: u64,
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct EstimateResponse {
     pub commission_usdx: u64,
-    pub transfer_gas_amount: u64,
-    pub transfer_gas_price_usdx: u64,
-    pub outbound_metadata: Vec<EstimateOutboundMetadata>,
+    pub commission_discount_usdx: u64,
+    pub transfer_gas_usdx: u64,
+    pub transfer_gas_discount_usdx: u64,
+    pub outbound_details: Vec<EstimateOutboundDetails>,
 }
 
 #[error_code]

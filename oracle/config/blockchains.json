@@ -9,14 +9,14 @@
     "id": 2,
     "lz_eid": 30168,
     "endpoint": "https://api.devnet.solana.com",
-    "contract": "D4qgtRF5t7MzA5nASfag3ef5Y68xb5hBcp9ac9Wttfkr",
+    "contract": "7uQ48SWiZ3PZtahmq1NGgbKpQGG9zY2M7ex1akHCBeUu",
     "logo": "https://cryptologos.cc/logos/solana-sol-logo.png"
   },
   "_solana": {
     "id": 3,
     "lz_eid": 40168,
     "endpoint": "https://api.devnet.solana.com",
-    "contract": "D4qgtRF5t7MzA5nASfag3ef5Y68xb5hBcp9ac9Wttfkr",
+    "contract": "7uQ48SWiZ3PZtahmq1NGgbKpQGG9zY2M7ex1akHCBeUu",
     "logo": "https://cryptologos.cc/logos/solana-sol-logo.png"
   },
   "arbitrum": {

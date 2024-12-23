@@ -4,6 +4,9 @@
 resolution = true
 skip-lint = false
 
+[programs.localnet]
+gringotts = "72pz8Jag6nMPT8uFtwv3TWA534Ej4ut8VrHHCDY1GrpK"
+
 [programs.devnet]
 gringotts = "72pz8Jag6nMPT8uFtwv3TWA534Ej4ut8VrHHCDY1GrpK"
 
@@ -15,9 +18,10 @@ gringotts = "72pz8Jag6nMPT8uFtwv3TWA534Ej4ut8VrHHCDY1GrpK"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "https://lively-prettiest-darkness.solana-mainnet.quiknode.pro/24c396ae999b77995e1355d6d475338fb963abcc"
-#cluster = "mainnet"
+#cluster = "https://lively-prettiest-darkness.solana-mainnet.quiknode.pro/24c396ae999b77995e1355d6d475338fb963abcc"
+cluster = "mainnet"
 #cluster = "devnet"
+#cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

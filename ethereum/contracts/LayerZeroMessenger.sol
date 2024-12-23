@@ -18,22 +18,21 @@ abstract contract LayerZeroBridge is OApp {
         ChainId _chainId,
         uint8 _header,
         bytes memory _message,
-        uint128 _receiverGasLimitNative
+        uint128 _receiverGasLimitNative,
+        uint128 _fee
     ) internal returns (string memory) {
         require(_message.length > 0, "Invalid message");
-        require(_receiverGasLimitNative > 0, "Invalid receiver gas limit");
+        require(_fee > 0, "Invalid fee");
         require(chainEIDMappings[_chainId] > 0, "Invalid chain ID");
 
         Message memory message = MessageLibrary.create(_header, _message);
         bytes memory messageEncoded = MessageLibrary.encode(message);
 
-        uint256 fee = quote(_chainId, _header, messageEncoded, _receiverGasLimitNative);
-
         MessagingReceipt memory receipt = _lzSend(
             chainEIDMappings[_chainId],
             messageEncoded,
             _build_options(_receiverGasLimitNative),
-            MessagingFee(fee * 2, 0),
+            MessagingFee(_fee * 2, 0),
             payable(address(this))
         );
 

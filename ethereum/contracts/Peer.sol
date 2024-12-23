@@ -4,15 +4,17 @@ pragma solidity ^0.8.10;
 import {ChainId, GringottsAddress} from "./Types.sol";
 import {Gringotts} from "./Gringotts.sol";
 
-    struct Peer {
-        ChainId chainID;
-        GringottsAddress endpoint;
-        uint32 lzEID;
+struct Peer {
+    ChainId chainID;
+    GringottsAddress endpoint;
 
-        GringottsAddress[] stableCoins;
+    uint32 lzEID;
+    uint8 inboundLimit;
 
-        uint128 baseGasEstimate;
-    }
+    GringottsAddress[] stableCoins;
+
+    uint128 baseGasEstimate;
+}
 
 library PeerLibrary {
     function hasStableCoin(Peer memory agent, GringottsAddress stableCoin) internal pure returns (bool) {

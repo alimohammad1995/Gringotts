@@ -1,13 +1,13 @@
 pub const CHAIN_TRANSFER_TYPE: u8 = 1;
 
 #[derive(Debug, Clone)]
-pub struct Message {
+pub struct Message<'info> {
     pub header: u8,
-    pub payload: Vec<u8>,
+    pub payload: &'info [u8],
 }
 
-impl Message {
-    pub fn new(header: u8, payload: Vec<u8>) -> Message {
+impl<'info> Message<'info> {
+    pub fn new(header: u8, payload: &'info [u8]) -> Message<'info> {
         Message { header, payload }
     }
 
@@ -18,28 +18,29 @@ impl Message {
         encoded
     }
 
-    pub fn decode(data: &[u8]) -> Message {
-        Self::new(data[0], data[1..].to_vec())
+    pub fn decode(data: &'info [u8]) -> Message {
+        Self::new(data[0], &data[1..])
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct ChainTransferItem {
+pub struct ChainTransferItem<'info> {
     pub amount_usdx: u64,
-    pub asset: [u8; 32],
-    pub recipient: [u8; 32],
-    pub executor: [u8; 32],
-    pub stable_token: [u8; 32],
-    pub command: Vec<u8>,
-    pub metadata: Vec<u8>,
+    pub asset: &'info [u8; 32],
+    pub recipient: &'info [u8; 32],
+    pub executor: &'info [u8; 32],
+    pub stable_token: &'info [u8; 32],
+    pub command: &'info [u8],
+    pub metadata: &'info [u8],
 }
 
 #[derive(Debug, Clone)]
-pub struct ChainTransfer {
-    pub items: Vec<ChainTransferItem>,
+pub struct ChainTransfer<'info> {
+    pub items: Vec<ChainTransferItem<'info>>,
+    pub metadata: &'info [u8],
 }
 
-impl ChainTransfer {
+impl<'info> ChainTransfer<'info> {
     pub fn encode(&self) -> Vec<u8> {
         let mut encoded: Vec<u8> = Vec::new();
 
@@ -49,22 +50,31 @@ impl ChainTransfer {
         for item in &self.items {
             encoded.extend_from_slice(&item.amount_usdx.to_be_bytes());
 
-            encoded.extend_from_slice(&item.asset);
-            encoded.extend_from_slice(&item.recipient);
-            encoded.extend_from_slice(&item.executor);
-            encoded.extend_from_slice(&item.stable_token);
+            encoded.extend_from_slice(item.asset);
+            encoded.extend_from_slice(item.recipient);
 
-            encoded.extend_from_slice(&(item.command.len() as u16).to_be_bytes());
-            encoded.extend_from_slice(&item.command);
+            let need_swap = if item.command.len() > 0 { 1u8 } else { 0u8 };
+            encoded.extend_from_slice(&need_swap.to_be_bytes());
 
-            encoded.extend_from_slice(&(item.metadata.len() as u16).to_be_bytes());
-            encoded.extend_from_slice(&item.metadata);
+            if need_swap > 0 {
+                encoded.extend_from_slice(item.executor);
+                encoded.extend_from_slice(item.stable_token);
+
+                encoded.extend_from_slice(&(item.command.len() as u16).to_be_bytes());
+                encoded.extend_from_slice(&item.command);
+
+                encoded.extend_from_slice(&(item.metadata.len() as u16).to_be_bytes());
+                encoded.extend_from_slice(&item.metadata);
+            }
         }
+
+        encoded.extend_from_slice(&(self.metadata.len() as u16).to_be_bytes());
+        encoded.extend_from_slice(&self.metadata);
 
         encoded
     }
 
-    pub fn decode(data: &[u8]) -> ChainTransfer {
+    pub fn decode(data: &'info [u8]) -> ChainTransfer<'info> {
         let mut offset = 0;
 
         // Read itemsCount (uint8, 1 byte)
@@ -76,53 +86,72 @@ impl ChainTransfer {
 
         for _ in 0..items_count {
             // Read amountUSDX (uint64, 8 bytes)
-            let amount_usdx_bytes = &data[offset..offset + 8];
+            let amount_usdx = u64::from_be_bytes((&data[offset..offset + 8]).try_into().unwrap());
             offset += 8;
-            let amount_usdx = u64::from_be_bytes(amount_usdx_bytes.try_into().unwrap());
 
             // Read asset (32 bytes)
-            let asset = data[offset..offset + 32].try_into().unwrap();
+            let asset = &data[offset..offset + 32];
             offset += 32;
 
             // Read recipient (32 bytes)
-            let recipient = data[offset..offset + 32].try_into().unwrap();
+            let recipient = &data[offset..offset + 32];
             offset += 32;
 
-            // Read executor (32 bytes)
-            let executor = data[offset..offset + 32].try_into().unwrap();
-            offset += 32;
+            // Read needSwap (uint8, 1 byte)
+            let need_swap = &data[offset..offset + 1];
+            offset += 1;
 
-            // Read stableToken (32 bytes)
-            let stable_token = data[offset..offset + 32].try_into().unwrap();
-            offset += 32;
+            let item: ChainTransferItem;
 
-            // Read command (uint16, 2 bytes)
-            let command_length =
-                u16::from_be_bytes((&data[offset..offset + 2]).try_into().unwrap()) as usize;
-            offset += 2;
-            let command = data[offset..offset + command_length].to_vec();
-            offset += command_length;
+            if need_swap[0] > 0 {
+                // Read executor (32 bytes)
+                let executor = &data[offset..offset + 32];
+                offset += 32;
 
-            // Read metadata (uint16, 2 bytes)
-            let metadata_length =
-                u16::from_be_bytes((&data[offset..offset + 2]).try_into().unwrap()) as usize;
-            offset += 2;
-            let metadata = data[offset..offset + metadata_length].to_vec();
-            offset += metadata_length;
+                // Read stableToken (32 bytes)
+                let stable_token = &data[offset..offset + 32];
+                offset += 32;
 
-            let item = ChainTransferItem {
-                amount_usdx,
-                asset,
-                recipient,
-                executor,
-                stable_token,
-                command,
-                metadata,
-            };
+                // Read command (uint16, 2 bytes)
+                let command_length = u16::from_be_bytes((&data[offset..offset + 2]).try_into().unwrap()) as usize;
+                offset += 2;
+                let command = &data[offset..offset + command_length];
+                offset += command_length;
+
+                // Read metadata (uint16, 2 bytes)
+                let metadata_length = u16::from_be_bytes((&data[offset..offset + 2]).try_into().unwrap()) as usize;
+                offset += 2;
+                let metadata = &data[offset..offset + metadata_length];
+                offset += metadata_length;
+
+                item = ChainTransferItem {
+                    amount_usdx,
+                    asset: asset.try_into().unwrap(),
+                    recipient: recipient.try_into().unwrap(),
+                    executor: executor.try_into().unwrap(),
+                    stable_token: stable_token.try_into().unwrap(),
+                    command,
+                    metadata,
+                };
+            } else {
+                item = ChainTransferItem {
+                    amount_usdx,
+                    asset: asset.try_into().unwrap(),
+                    recipient: recipient.try_into().unwrap(),
+                    executor: &[0u8; 32],
+                    stable_token: &[0u8; 32],
+                    command: &[],
+                    metadata: &[],
+                };
+            }
 
             items.push(item);
         }
 
-        ChainTransfer { items }
+        let metadata_length = u16::from_be_bytes((&data[offset..offset + 2]).try_into().unwrap()) as usize;
+        offset += 2;
+        let metadata = data[offset..offset + metadata_length].as_ref();
+
+        ChainTransfer { items, metadata }
     }
 }

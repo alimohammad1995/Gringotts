@@ -217,27 +217,81 @@ async function widthdraw_token() {
 
     console.log("User USDC", userUSDC.toBase58());
     console.log("Gringotts USDC", gringottsUSDC.toBase58());
+    console.log("Gringotts USDC", vaultPDA.toBase58());
 
-    const tx = await program.methods.tokenWithdraw({
-        amount: new BN(7 * 1000 * 1000)
+    // const tx1 = await program.methods.tokenWithdraw({
+    //     amount: new BN(7 * 1000 * 1000)
+    // }).accounts({
+    //     gringotts: gringottsPDA,
+    //     recipient: wallet.publicKey,
+    //     tokenMint: USDC,
+    //     gringottsTokenAccount: gringottsUSDC,
+    //     recipientTokenAccount: userUSDC,
+    //     associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+    //     tokenProgram: TOKEN_PROGRAM_ID,
+    //     systemProgram: SystemProgram.programId
+    // }).rpc()
+    //
+    // console.log(tx1);
+
+    // const tx2 = await program.methods.vaultWithdraw({
+    //     amount: new BN(10 * 1000 * 1000)
+    // }).accounts({
+    //     gringotts: gringottsPDA,
+    //     recipient: wallet.publicKey,
+    //     vault: vaultPDA,
+    //     systemProgram: SystemProgram.programId
+    // }).rpc()
+    //
+    // console.log(tx2);
+}
+
+async function lzReceive() {
+    console.log(gringottsPDA.toBase58());
+    console.log("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
+    console.log("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
+    console.log("11111111111111111111111111111111");
+    console.log("H6ieTjyWqcRFv1RwD9LghEFDxVtMaEMgVbgnYrdHMjr5");
+    console.log(NATIVE_MINT.toBase58());
+    console.log(getAssociatedTokenAddressSync(
+        NATIVE_MINT,
+        gringottsPDA,
+        true
+    ).toBase58())
+    console.log("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4");
+    console.log("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+    console.log(getAssociatedTokenAddressSync(
+        USDC,
+        gringottsPDA,
+        true
+    ).toBase58())
+    console.log(getAssociatedTokenAddressSync(
+        USDC,
+        wallet.publicKey,
+        true
+    ).toBase58())
+
+    const tx = await program.methods.lzReceiveTypes({
+        srcEid: ARB_EID,
+        sender: Array.from(utils.arrayify(utils.hexZeroPad(ARB_ADDRESS, 32))),
+        nonce: new BN(2),
+        guid: Array.from(utils.arrayify(utils.hexZeroPad("0x0", 32))),
+        // message: Buffer.from("010100000000002bfb2f0000000000000000000000000000000000000000000000000000000000000000ef31fbe855115c624e9b35d3ea3e1ac581a4b213487345869e0f60f599d8cc660479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138fc6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d610023e517cb977ae3ad2a010000001964000180841e00000000006d6b050000000000640000033a1906ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a900ef31fbe855115c624e9b35d3ea3e1ac581a4b213487345869e0f60f599d8cc6600429f70d4e01764b7255936546cfbf0eedbd8a6a887cea01851509632c5c9cd650128d7938c2685268928284987dd9b46409bbf1e22ea56285d653a7fb9abecce03010479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f00c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61000479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f00b43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8000479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f000e03685f8e909053e458121c66f5a76aedc7706aa11c82f8aa952a8f2b7879a90006ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a90006ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a900054a535a992921064d24e87160da387c7c35b5ddbc92bb81e41fa8404105448d00ef31fbe855115c624e9b35d3ea3e1ac581a4b213487345869e0f60f599d8cc6600538745d236517bba822fb87c8a0ffd7a981125acd6bf793f2f07529551a37c2201069b8857feab8184fb687f634618c035dac439dc1aeb3b5598a0f0000000000100c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d6100429f70d4e01764b7255936546cfbf0eedbd8a6a887cea01851509632c5c9cd65014eacd57702d35bcb7e52c58caf01c4bdcfebf35e0e99547dc8b55066e8db5afa0128d7938c2685268928284987dd9b46409bbf1e22ea56285d653a7fb9abecce0301c528bd00d0774c59320cb908f8c41b8fddcb0bc86cd53bf317b4fbbac28355880102333e1d4d67788300eae9a294feca87813ce579503b6d308ecb9f6448e3bed00143e4192edb5ae4ffdb2882b9a003b63fefe9df8ac324e3e3a39033632322aea10127aac7", 'hex'),
+        // message: Buffer.from("010100000000002bfa410000000000000000000000000000000000000000000000000000000000000000ef31fbe855115c624e9b35d3ea3e1ac581a4b213487345869e0f60f599d8cc660479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138fc6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d610023e517cb977ae3ad2a010000001964000180841e00000000006d6b05000000000064000002531206ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a900ef31fbe855115c624e9b35d3ea3e1ac581a4b213487345869e0f60f599d8cc6600429f70d4e01764b7255936546cfbf0eedbd8a6a887cea01851509632c5c9cd650128d7938c2685268928284987dd9b46409bbf1e22ea56285d653a7fb9abecce03010479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f00c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61000479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f00b43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8000479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f00069be86ec9af65eb4a614fd99b8e92547da0145fab5e804adb594db3e73a271b00ef31fbe855115c624e9b35d3ea3e1ac581a4b213487345869e0f60f599d8cc6600a5d8744c3d0ad845e0d44689b8ea407cc2f491d1bb7931f55cd40810e557e1aa01aa3f371e63ade99128ff53f5fc6b229ff8ec58274bf9e98bb39b9ada262fe7f901046d84465266a1d3008798a5b499bac12326c4b15bfb47fff0a549eb42fe2b6801429f70d4e01764b7255936546cfbf0eedbd8a6a887cea01851509632c5c9cd650128d7938c2685268928284987dd9b46409bbf1e22ea56285d653a7fb9abecce030106ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a90006a7d517187bd16635dad40455fdc2c0c124c68f215675a5dbbacb5f0800000000", 'hex'),
+        message: Buffer.from("010100000000002bfa410000000000000000000000000000000000000000000000000000000000000000ef31fbe855115c624e9b35d3ea3e1ac581a4b213487345869e0f60f599d8cc660479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138fc6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d610023e517cb977ae3ad2a010000001964000180841e00000000006d6b05000000000064000002531206ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a900ef31fbe855115c624e9b35d3ea3e1ac581a4b213487345869e0f60f599d8cc6600429f70d4e01764b7255936546cfbf0eedbd8a6a887cea01851509632c5c9cd650128d7938c2685268928284987dd9b46409bbf1e22ea56285d653a7fb9abecce03010479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f00c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d61000479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f00b43ffa27f5d7f64a74c09b1f295879de4b09ab36dfc9dd514b321aa7b38ce5e8000479d55bf231c06eee74c56ece681507fdb1b2dea3f48e5102b1cda256bc138f00069be86ec9af65eb4a614fd99b8e92547da0145fab5e804adb594db3e73a271b00ef31fbe855115c624e9b35d3ea3e1ac581a4b213487345869e0f60f599d8cc6600a5d8744c3d0ad845e0d44689b8ea407cc2f491d1bb7931f55cd40810e557e1aa01aa3f371e63ade99128ff53f5fc6b229ff8ec58274bf9e98bb39b9ada262fe7f901046d84465266a1d3008798a5b499bac12326c4b15bfb47fff0a549eb42fe2b6801429f70d4e01764b7255936546cfbf0eedbd8a6a887cea01851509632c5c9cd650128d7938c2685268928284987dd9b46409bbf1e22ea56285d653a7fb9abecce030106ddf6e1d765a193d9cbe146ceeb79ac1cb485ed5f5b37913a8cf5857eff00a90006a7d517187bd16635dad40455fdc2c0c124c68f215675a5dbbacb5f0800000000", 'hex'),
+        extraData: Buffer.from([]),
     }).accounts({
         gringotts: gringottsPDA,
-        recipient: wallet.publicKey,
-        tokenMint: USDC,
-        gringottsTokenAccount: gringottsUSDC,
-        recipientTokenAccount: userUSDC,
-        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId
-    }).rpc()
+    }).simulate()
 
     console.log(tx);
 }
 
 async function main() {
     // await createAddressLookup();
-    await bridge(ARB_EID);
+    // await bridge(ARB_EID);
     await widthdraw_token();
+    // await lzReceive();
 }
 
 main()

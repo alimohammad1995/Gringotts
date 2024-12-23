@@ -26,6 +26,10 @@ library MathUtils {
     }
 
     function microBPS(uint256 _amount, uint32 _microBps) internal pure returns (uint256) {
+        if (_microBps == 0) {
+            return 0;
+        }
+
         return _amount * _microBps / 10_000_000;
     }
 

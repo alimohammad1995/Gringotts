@@ -105,6 +105,10 @@ func OutboundTransaction(
 		ToToken:     desiredToken,
 	}
 
+	if (chain == models.Solana || chain == models.SolanaDev) && len(desiredToken.Address) == 0 {
+		params.Recipient = models.GetGringotts(chain)
+	}
+
 	swap, err := dex.GetSwap(params)
 	if err != nil {
 		return nil, err

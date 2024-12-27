@@ -41,6 +41,7 @@ pub fn estimate_marketplace(
 
         let mut command_storage = Vec::new();
         let mut metadata_storage = Vec::new();
+
         for j in 0usize..outbound.items.len() {
             let item = &outbound.items[j];
             command_storage.push(vec![0u8; item.command_length as usize]);

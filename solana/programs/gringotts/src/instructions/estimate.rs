@@ -13,9 +13,10 @@ pub struct Estimate<'info> {
 
 impl Estimate<'_> {
     pub fn apply(ctx: Context<Estimate>, params: &EstimateRequest) -> Result<EstimateResponse> {
-        let peers = params.process(&ctx.remaining_accounts)?;
         let gringotts = &ctx.accounts.gringotts;
         let price_feed = &ctx.accounts.price_feed;
+
+        let peers = params.process(&ctx.remaining_accounts)?;
 
         let estimate_result = estimate_marketplace(
             params,

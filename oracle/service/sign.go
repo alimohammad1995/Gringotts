@@ -226,10 +226,10 @@ func createEVMTransaction(
 			gas, _, _ := GetExecutionParams(chain, transaction.ToToken)
 
 			transactionItem := connection.GringottsBridgeOutboundTransferItem{
-				Asset:              utils.ToByte32(transaction.ToToken),
-				Recipient:          utils.ToByte32(transaction.Recipient),
-				ExecutionGasAmount: big.NewInt(int64(gas)),
-				DistributionBP:     uint16(transaction.DistributionBPS),
+				Asset:          utils.ToByte32(transaction.ToToken),
+				Recipient:      utils.ToByte32(transaction.Recipient),
+				ExecutionGas:   big.NewInt(int64(gas)),
+				DistributionBP: uint16(transaction.DistributionBPS),
 			}
 
 			if transaction.Swap != nil {
@@ -245,8 +245,9 @@ func createEVMTransaction(
 		}
 
 		outboundTransfers = append(outboundTransfers, connection.GringottsBridgeOutboundTransfer{
-			ChainId: chain.GetId(),
-			Items:   transactionItems,
+			ChainId:  chain.GetId(),
+			Metadata: getMetaData(chain, transactions),
+			Items:    transactionItems,
 		})
 	}
 
@@ -266,4 +267,54 @@ func createEVMTransaction(
 		Data:     data,
 		Value:    value,
 	}, nil
+}
+
+func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []byte {
+	if chain != models.Solana && chain != models.SolanaDev {
+		return make([]byte, 0)
+	}
+
+	accounts := []models.Account{
+		{Address: models.GetGringotts(chain), IsSigner: false, IsWritable: false},
+		{Address: models.GetVault(chain), IsSigner: false, IsWritable: true},
+		{Address: solana.SPLAssociatedTokenAccountProgramID.String(), IsSigner: false, IsWritable: false},
+		{Address: solana.TokenProgramID.String(), IsSigner: false, IsWritable: false},
+		{Address: solana.SystemProgramID.String(), IsSigner: false, IsWritable: false},
+	}
+
+	metadata := make([]byte, 0)
+	for _, transaction := range transactions {
+		accounts = append(accounts,
+			models.Account{Address: transaction.Recipient, IsSigner: false, IsWritable: transaction.ToToken == ""},
+		)
+
+		// Stable transfer
+		if transaction.Swap == nil {
+			accounts = append(accounts,
+				models.Account{Address: transaction.ToToken, IsSigner: false, IsWritable: false},
+				models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), transaction.ToToken), IsSigner: false, IsWritable: true},
+				models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.ToToken), IsSigner: false, IsWritable: true},
+			)
+		} else {
+			if transaction.ToToken != "" {
+				accounts = append(accounts,
+					models.Account{Address: transaction.FromToken, IsSigner: false, IsWritable: false},
+					models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), transaction.FromToken), IsSigner: false, IsWritable: true},
+					models.Account{Address: transaction.ToToken, IsSigner: false, IsWritable: false},
+					models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.ToToken), IsSigner: false, IsWritable: true},
+					models.Account{Address: provider.JupiterAddress, IsSigner: false, IsWritable: false},
+					models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.FromToken), IsSigner: false, IsWritable: true},
+				)
+			} else {
+				accounts = append(accounts,
+					models.Account{Address: transaction.FromToken, IsSigner: false, IsWritable: false},
+					models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), transaction.FromToken), IsSigner: false, IsWritable: true},
+					models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), models.NativeMint), IsSigner: false, IsWritable: true},
+					models.Account{Address: provider.JupiterAddress, IsSigner: false, IsWritable: false},
+					models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.FromToken), IsSigner: false, IsWritable: true},
+				)
+			}
+		}
+	}
+	return metadata
 }

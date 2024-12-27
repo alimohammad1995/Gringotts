@@ -31,7 +31,8 @@ pub struct Bridge<'info> {
     pub self_peer: Account<'info, Peer>,
 
     #[account(
-        init_if_needed, payer = user,
+        init_if_needed,
+        payer = user,
         associated_token::mint = stable_coin_mint,
         associated_token::authority = gringotts,
     )]
@@ -114,7 +115,9 @@ impl<'info> Bridge<'info> {
                 )?;
 
                 let mut gringotts_token: Account<TokenAccount> = Account::try_from(token_account)?;
+
                 require!(gringotts_token.owner.key() == gringotts.key(), BridgeErrorCode::InvalidParams);
+                require!(gringotts_token.mint.key() == token_mint.key(), BridgeErrorCode::InvalidParams);
 
                 if item.asset == [0; 32] {
                     let seeds = &[GRINGOTTS_SEED, &[gringotts.bump]];
@@ -138,24 +141,27 @@ impl<'info> Bridge<'info> {
                         },
                         signer_seeds,
                     ))?;
+
+                    r += 2;
                 } else {
-                    let user_token_account = remaining_accounts[r + 2].to_account_info();
+                    let user_token_account = &remaining_accounts[r + 2];
+
                     let cpi_ctx = CpiContext::new(
                         token_program.to_account_info(),
                         Transfer {
-                            from: user_token_account,
+                            from: user_token_account.to_account_info(),
                             to: gringotts_token.to_account_info(),
                             authority: signer.to_account_info(),
                         },
                     );
 
                     token::transfer(cpi_ctx, item.amount)?;
+
+                    r += 3;
                 }
 
                 let swap = item.swap.as_ref().unwrap();
                 let swap_account_counts = swap.metadata[m] as usize;
-
-                r += if item.asset == [0; 32] { 2 } else { 3 };
                 m += 1;
 
                 let before_swap_amount = gringotts_token.amount;
@@ -170,7 +176,7 @@ impl<'info> Bridge<'info> {
                 gringotts_token.reload()?;
 
                 require!(
-                    gringotts_token.amount - before_swap_amount <= item.amount,
+                    gringotts_token.amount - before_swap_amount >= item.amount,
                     BridgeErrorCode::InvalidSwapAmount
                 );
 
@@ -217,7 +223,7 @@ impl<'info> Bridge<'info> {
             estimate_outbounds.push(EstimateOutboundTransfer {
                 chain_id: params.outbounds[i].chain_id,
                 items: items,
-                metadata_length: 0,
+                metadata_length: params.outbounds[i].metadata.len() as u16,
             });
 
             let mut data = &remaining_accounts[r + i].try_borrow_data()?[..];
@@ -376,7 +382,7 @@ fn init_token_account_if_needed<'info>(
     token_account: &AccountInfo<'info>,
     authority: &AccountInfo<'info>,
     token_mint: &Account<'info, Mint>,
-    signer: &Signer<'info>,
+    payer: &Signer<'info>,
     system_program: &Program<'info, System>,
     token_program: &Program<'info, Token>,
     associated_token_program: &Program<'info, AssociatedToken>,
@@ -390,7 +396,7 @@ fn init_token_account_if_needed<'info>(
 
     if token_account.data_is_empty() {
         let cpi_accounts = associated_token::Create {
-            payer: signer.to_account_info(),
+            payer: payer.to_account_info(),
             associated_token: token_account.clone(),
             authority: authority.to_account_info(),
             mint: token_mint.to_account_info(),

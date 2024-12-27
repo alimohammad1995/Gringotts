@@ -18,6 +18,7 @@ type Account struct {
 	Address    string `json:"address"`
 	IsWritable bool   `json:"is_writable"`
 	IsSigner   bool   `json:"is_signer"`
+	Index      uint8  `json:"index"`
 }
 
 type AccountModel struct {

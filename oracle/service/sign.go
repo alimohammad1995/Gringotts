@@ -4,6 +4,7 @@ import (
 	"context"
 	solana "github.com/blocto/solana-go-sdk/common"
 	"github.com/blocto/solana-go-sdk/types"
+	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/holiman/uint256"
 	"github.com/near/borsh-go"
@@ -282,7 +283,6 @@ func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []
 		{Address: solana.SystemProgramID.String(), IsSigner: false, IsWritable: false},
 	}
 
-	metadata := make([]byte, 0)
 	for _, transaction := range transactions {
 		accounts = append(accounts,
 			models.Account{Address: transaction.Recipient, IsSigner: false, IsWritable: transaction.ToToken == ""},
@@ -314,7 +314,43 @@ func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []
 					models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.FromToken), IsSigner: false, IsWritable: true},
 				)
 			}
+
+			for _, acc := range transaction.Swap.Accounts {
+				accounts = append(accounts,
+					models.Account{Address: acc.Address, IsSigner: false, IsWritable: acc.IsWritable},
+				)
+			}
 		}
 	}
+
+	accountsMap := make(map[string]models.Account)
+	for _, account := range accounts {
+		if existingAccount, ok := accountsMap[account.Address]; ok {
+			existingAccount.IsWritable = accountsMap[account.Address].IsWritable || account.IsWritable
+			accountsMap[account.Address] = existingAccount
+		} else {
+			accountsMap[account.Address] = account
+		}
+	}
+
+	metadata := make([]byte, len(accountsMap))
+	addressMap := make(map[string]int)
+	i := 0
+	for _, account := range accountsMap {
+		addressBytes := base58.Decode(account.Address)
+		metadata = append(metadata, addressBytes...)
+		if account.IsWritable {
+			metadata = append(metadata, 1)
+		} else {
+			metadata = append(metadata, 0)
+		}
+		addressMap[account.Address] = i
+		i += 1
+	}
+
+	for _, account := range accounts {
+		metadata = append(metadata, byte(addressMap[account.Address]))
+	}
+
 	return metadata
 }

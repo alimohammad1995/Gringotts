@@ -127,7 +127,6 @@ func EstimateMarketplaceSolana(
 	}
 
 	return &provider.Estimate{
-		GasPrice:      uint256.NewInt(response.TransferGasPrice),
 		GasPriceUSD:   uint256.NewInt(response.TransferGasPriceUsdx),
 		CommissionUSD: uint256.NewInt(response.CommissionUsdx),
 	}, nil
@@ -168,10 +167,10 @@ func estimateMarketplaceEVM(
 			executionGas, commendLength, metadataLength := GetExecutionParams(chainIter, asset)
 
 			items = append(items, connection.GringottsEstimateOutboundTransferItem{
-				Asset:                   utils.ToByte32(asset),
-				ExecutionGasAmount:      uint256.NewInt(executionGas).ToBig(),
-				ExecutionCommandLength:  commendLength,
-				ExecutionMetadataLength: metadataLength,
+				Asset:          utils.ToByte32(asset),
+				ExecutionGas:   uint256.NewInt(executionGas).ToBig(),
+				CommandLength:  commendLength,
+				MetadataLength: metadataLength,
 			})
 		}
 
@@ -189,12 +188,10 @@ func estimateMarketplaceEVM(
 		return nil, err
 	}
 
-	gasPrice, _ := uint256.FromBig(res.TransferGasAmount)
-	gasPriceUSD, _ := uint256.FromBig(res.TransferGasAmountUSDX)
+	gasPriceUSD, _ := uint256.FromBig(res.TransferGasUSDX)
 	CommissionUSD, _ := uint256.FromBig(res.CommissionUSDX)
 
 	return &provider.Estimate{
-		GasPrice:      gasPrice,
 		GasPriceUSD:   gasPriceUSD,
 		CommissionUSD: CommissionUSD,
 	}, nil

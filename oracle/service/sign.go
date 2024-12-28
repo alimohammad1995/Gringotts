@@ -44,16 +44,16 @@ func createSolanaTransaction(
 	for i, transaction := range inTransaction {
 		tAmount, _ := uint256.FromDecimal(transaction.SrcAmount)
 		inboundTransfer := connection.BridgeInboundTransferItem{
-			Asset:  utils.ToByte32(transaction.FromToken),
+			Asset:  utils.ToByte32SOL(transaction.FromToken),
 			Amount: tAmount.Uint64(),
 		}
 
 		if transaction.Swap != nil {
 			inboundTransfer.Swap = &connection.Swap{
-				Executor:    utils.ToByte32(transaction.Swap.Executor),
+				Executor:    utils.ToByte32SOL(transaction.Swap.Executor),
 				Command:     utils.FromHex(transaction.Swap.Command),
 				Metadata:    utils.FromHex(transaction.Swap.MetaData),
-				StableToken: utils.ToByte32(transaction.ToToken),
+				StableToken: utils.ToByte32SOL(transaction.ToToken),
 			}
 		}
 
@@ -276,7 +276,6 @@ func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []
 	}
 
 	accounts := []models.Account{
-		{Address: models.GetGringotts(chain), IsSigner: false, IsWritable: false},
 		{Address: models.GetVault(chain), IsSigner: false, IsWritable: true},
 		{Address: solana.SPLAssociatedTokenAccountProgramID.String(), IsSigner: false, IsWritable: false},
 		{Address: solana.TokenProgramID.String(), IsSigner: false, IsWritable: false},
@@ -333,9 +332,10 @@ func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []
 		}
 	}
 
-	metadata := make([]byte, len(accountsMap))
+	metadata := []byte{byte(len(accountsMap))}
 	addressMap := make(map[string]int)
 	i := 0
+
 	for _, account := range accountsMap {
 		addressBytes := base58.Decode(account.Address)
 		metadata = append(metadata, addressBytes...)

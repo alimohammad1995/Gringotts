@@ -2,7 +2,6 @@ package provider
 
 import (
 	"encoding/base64"
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/go-resty/resty/v2"
 	"github.com/holiman/uint256"
 	"gringotts/models"
@@ -63,16 +62,6 @@ func (o *Jupiter) createMeta(chain models.Blockchain, swapAccounts []interface{}
 	for _, swapAccount := range swapAccounts {
 		pubkey := swapAccount.(map[string]interface{})["pubkey"].(string)
 		isWriteable := swapAccount.(map[string]interface{})["isWritable"].(bool)
-
-		addressBytes := base58.Decode(pubkey)
-		metadata = append(metadata, addressBytes...)
-
-		if isWriteable {
-			metadata = append(metadata, 1)
-		} else {
-			metadata = append(metadata, 0)
-		}
-
 		accounts = append(accounts, Account{Address: pubkey, IsSigner: false, IsWriteable: isWriteable})
 	}
 

@@ -78,6 +78,7 @@ func OutboundTransaction(
 		return &provider.Transaction{
 			FromToken:    desiredToken,
 			ToToken:      desiredToken,
+			Recipient:    recipient,
 			OutAmount:    utils.MoveDecimals(amount, config.ChainTransferDecimals, desiredToken.Decimals),
 			MinOutAmount: utils.MoveDecimals(amount, config.ChainTransferDecimals, desiredToken.Decimals),
 		}, nil

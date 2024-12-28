@@ -22,6 +22,7 @@
   "arbitrum": {
     "id": 1,
     "lz_eid": 40231,
+    "contract" : "0x9c4e6e7e2f2387c3fd9fccc499c18d6c98528931",
     "endpoint": "https://arbitrum-sepolia.infura.io/v3/463ba1f0f1c34f1da7403e6f4e81ebef",
     "logo": "https://cryptologos.cc/logos/arbitrum-arb-logo.png"
   },

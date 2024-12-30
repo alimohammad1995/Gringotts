@@ -15,14 +15,22 @@ pub struct LzReceive<'info> {
     #[account(seeds = [GRINGOTTS_SEED], bump = gringotts.bump)]
     pub gringotts: Account<'info, Gringotts>,
     #[account(
-        seeds = [PEER_SEED, &gringotts.lz_eid.to_le_bytes()], bump = self_peer.bump,
+        seeds = [PEER_SEED, &gringotts.lz_eid.to_le_bytes()],
+        bump = self_peer.bump
     )]
     pub self_peer: Account<'info, Peer>,
     #[account(
-        seeds = [PEER_SEED, &params.src_eid.to_le_bytes()], bump = peer.bump,
+        seeds = [PEER_SEED, &params.src_eid.to_le_bytes()],
+        bump = peer.bump,
         constraint = params.sender == peer.address
     )]
     pub peer: Account<'info, Peer>,
+    #[account(mut, seeds = [VAULT_SEED], bump)]
+    pub vault: SystemAccount<'info>,
+
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
 }
 
 impl<'info> LzReceive<'info> {
@@ -37,7 +45,19 @@ impl<'info> LzReceive<'info> {
         let self_peer = &ctx.accounts.self_peer;
         let peer = &ctx.accounts.peer;
 
-        let remaining_accounts = ctx.remaining_accounts;
+        let all_accounts: Vec<AccountInfo<'info>> = ctx.remaining_accounts
+            .iter()
+            .map(|account| account.to_account_info())
+            .chain([
+                ctx.accounts.gringotts.to_account_info(),
+                ctx.accounts.vault.to_account_info(),
+                ctx.accounts.associated_token_program.to_account_info(),
+                ctx.accounts.token_program.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ])
+            .collect();
+        let remaining_accounts = &all_accounts;
+
         let mut r = 0;
 
         let message = Message::decode(params.message.as_slice());
@@ -49,12 +69,11 @@ impl<'info> LzReceive<'info> {
             let mappings = &chain_transfer.metadata[accounts_count * 33 + 1..];
 
             let vault = get_account(remaining_accounts, r, mappings);
-            let (vault_key, vault_bump) = Pubkey::find_program_address(&[VAULT_SEED], ctx.program_id);
-            require!(vault.key() == vault_key, BridgeErrorCode::InvalidParams);
+            let (_, vault_bump) = Pubkey::find_program_address(&[VAULT_SEED], ctx.program_id);
 
-            let system_program = &Program::<System>::try_from(get_account(remaining_accounts, r + 1, mappings))?;
-            let token_program = &Program::<Token>::try_from(get_account(remaining_accounts, r + 2, mappings))?;
-            let associated_token_program = &Program::<AssociatedToken>::try_from(get_account(remaining_accounts, r + 3, mappings))?;
+            let system_program = get_account(remaining_accounts, r + 1, mappings);
+            let token_program = get_account(remaining_accounts, r + 2, mappings);
+            let associated_token_program = get_account(remaining_accounts, r + 3, mappings);
 
             r += 4;
 
@@ -63,9 +82,12 @@ impl<'info> LzReceive<'info> {
                 r += 1;
 
                 if self_peer.has_stable_coin(*item.asset) {
-                    let stable_coin_mint = &Account::<Mint>::try_from(get_account(remaining_accounts, r, mappings))?;
-                    let gringotts_stable_coin_account = &Account::<Mint>::try_from(get_account(remaining_accounts, r + 1, mappings))?;
-                    let recipient_stable_coin_account = &Account::<Mint>::try_from(get_account(remaining_accounts, r + 2, mappings))?;
+                    let stable_coin_mint = get_account(remaining_accounts, r, mappings);
+                    let mut data = &stable_coin_mint.try_borrow_data()?[..];
+                    let stable_coin_info = Mint::try_deserialize(&mut data)?;
+
+                    let gringotts_stable_coin_account = get_account(remaining_accounts, r + 1, mappings);
+                    let recipient_stable_coin_account = get_account(remaining_accounts, r + 2, mappings);
 
                     init_token_account_if_needed(
                         &recipient_stable_coin_account.to_account_info(),
@@ -90,14 +112,20 @@ impl<'info> LzReceive<'info> {
 
                     token::transfer(
                         cpi_ctx,
-                        change_decimals(item.amount_usdx, CHAIN_TRANSFER_DECIMALS, stable_coin_mint.decimals),
+                        change_decimals(item.amount_usdx, CHAIN_TRANSFER_DECIMALS, stable_coin_info.decimals),
                     )?;
 
                     r += 3;
                 } else if *item.asset != [0; 32] {
-                    let stable_coin_mint = &Account::<Mint>::try_from(get_account(remaining_accounts, r, mappings))?;
-                    let gringotts_stable_coin_account = &mut Account::<TokenAccount>::try_from(get_account(remaining_accounts, r + 1, mappings))?;
-                    let desired_token_mint = &Account::<Mint>::try_from(get_account(remaining_accounts, r + 2, mappings))?;
+                    let stable_coin_mint = get_account(remaining_accounts, r, mappings);
+                    let mut data = &stable_coin_mint.try_borrow_data()?[..];
+                    let stable_coin_mint_info = Mint::try_deserialize(&mut data)?;
+
+                    let gringotts_stable_coin_account = get_account(remaining_accounts, r + 1, mappings);
+                    let mut data = &gringotts_stable_coin_account.try_borrow_data()?[..];
+                    let stable_coin_info = TokenAccount::try_deserialize(&mut data)?;
+
+                    let desired_token_mint = get_account(remaining_accounts, r + 2, mappings);
                     let recipient_desired_token_account = get_account(remaining_accounts, r + 3, mappings);
                     let swap_program = get_account(remaining_accounts, r + 4, mappings);
                     let recipient_stable_coin_account = get_account(remaining_accounts, r + 5, mappings);
@@ -118,7 +146,7 @@ impl<'info> LzReceive<'info> {
                     let swap_account_counts = item.metadata[0] as usize;
                     let swap_accounts = get_accounts(remaining_accounts, r, r + swap_account_counts, mappings);
 
-                    let before_swap_stable_coin_amount = gringotts_stable_coin_account.amount;
+                    let before_swap_stable_coin_amount = stable_coin_info.amount;
 
                     let res = swap_on_jupiter(
                         gringotts,
@@ -130,11 +158,12 @@ impl<'info> LzReceive<'info> {
                     r = r + swap_account_counts;
 
                     if res.is_ok() {
-                        gringotts_stable_coin_account.reload()?;
-                        let swap_stable_coin_use = before_swap_stable_coin_amount - gringotts_stable_coin_account.amount;
+                        let mut data = &gringotts_stable_coin_account.try_borrow_data()?[..];
+                        let stable_coin_info = TokenAccount::try_deserialize(&mut data)?;
+                        let swap_stable_coin_use = before_swap_stable_coin_amount - stable_coin_info.amount;
 
                         require!(
-                            change_decimals(swap_stable_coin_use, stable_coin_mint.decimals, CHAIN_TRANSFER_DECIMALS) <= item.amount_usdx,
+                            change_decimals(swap_stable_coin_use, stable_coin_mint_info.decimals, CHAIN_TRANSFER_DECIMALS) <= item.amount_usdx,
                             LzReceiveErrorCode::InvalidParams
                         );
                     } else {
@@ -161,13 +190,19 @@ impl<'info> LzReceive<'info> {
 
                         token::transfer(
                             cpi_ctx,
-                            change_decimals(item.amount_usdx, CHAIN_TRANSFER_DECIMALS, stable_coin_mint.decimals),
+                            change_decimals(item.amount_usdx, CHAIN_TRANSFER_DECIMALS, stable_coin_mint_info.decimals),
                         )?;
                     }
                 } else {
-                    let stable_coin_mint = &Account::<Mint>::try_from(get_account(remaining_accounts, r, mappings))?;
-                    let gringotts_stable_coin_account = &mut Account::<TokenAccount>::try_from(get_account(remaining_accounts, r + 1, mappings))?;
-                    let native_mint = &Account::<Mint>::try_from(get_account(remaining_accounts, r + 2, mappings))?;
+                    let stable_coin_mint = get_account(remaining_accounts, r, mappings);
+                    let mut data = &stable_coin_mint.try_borrow_data()?[..];
+                    let stable_coin_mint_info = Mint::try_deserialize(&mut data)?;
+
+                    let gringotts_stable_coin_account = get_account(remaining_accounts, r + 1, mappings);
+                    let mut data = &gringotts_stable_coin_account.try_borrow_data()?[..];
+                    let stable_coin_info = TokenAccount::try_deserialize(&mut data)?;
+
+                    let native_mint = get_account(remaining_accounts, r + 2, mappings);
                     let gringotts_native_account = get_account(remaining_accounts, r + 3, mappings);
                     let swap_program = get_account(remaining_accounts, r + 4, mappings);
                     let recipient_stable_coin_account = get_account(remaining_accounts, r + 5, mappings);
@@ -188,7 +223,7 @@ impl<'info> LzReceive<'info> {
                     let swap_account_counts = item.metadata[0] as usize;
                     let swap_accounts = get_accounts(remaining_accounts, r, r + swap_account_counts, mappings);
 
-                    let before_swap_stable_coin_amount = gringotts_stable_coin_account.amount;
+                    let before_swap_stable_coin_amount = stable_coin_info.amount;
 
                     let res = swap_on_jupiter(
                         gringotts,
@@ -200,11 +235,12 @@ impl<'info> LzReceive<'info> {
                     r = r + swap_account_counts;
 
                     if res.is_ok() {
-                        gringotts_stable_coin_account.reload()?;
-                        let swap_stable_coin_use = before_swap_stable_coin_amount - gringotts_stable_coin_account.amount;
+                        let mut data = &gringotts_stable_coin_account.try_borrow_data()?[..];
+                        let stable_coin_info = TokenAccount::try_deserialize(&mut data)?;
+                        let swap_stable_coin_use = before_swap_stable_coin_amount - stable_coin_info.amount;
 
                         require!(
-                            change_decimals(swap_stable_coin_use, stable_coin_mint.decimals, CHAIN_TRANSFER_DECIMALS) <= item.amount_usdx,
+                            change_decimals(swap_stable_coin_use, stable_coin_mint_info.decimals, CHAIN_TRANSFER_DECIMALS) <= item.amount_usdx,
                             LzReceiveErrorCode::InvalidParams
                         );
 
@@ -238,7 +274,7 @@ impl<'info> LzReceive<'info> {
 
                         token::transfer(
                             cpi_ctx,
-                            change_decimals(item.amount_usdx, CHAIN_TRANSFER_DECIMALS, stable_coin_mint.decimals),
+                            change_decimals(item.amount_usdx, CHAIN_TRANSFER_DECIMALS, stable_coin_mint_info.decimals),
                         )?;
                     }
                 }
@@ -269,7 +305,7 @@ fn close_wsol_token<'info>(
     gringotts: &Account<'info, Gringotts>,
     token_account: &AccountInfo<'info>,
     recipient: &AccountInfo<'info>,
-    token_program: &Program<'info, Token>,
+    token_program: &AccountInfo<'info>,
 ) -> Result<()> {
     let gringotts_seeds: &[&[u8]] = &[GRINGOTTS_SEED, &[gringotts.bump]];
     let signer_seeds = &[gringotts_seeds];
@@ -298,12 +334,12 @@ fn close_wsol_token<'info>(
 fn init_token_account_if_needed<'info>(
     token_account: &AccountInfo<'info>,
     authority: &AccountInfo<'info>,
-    token_mint: &Account<'info, Mint>,
+    token_mint: &AccountInfo<'info>,
     vault: &AccountInfo<'info>,
     vault_bump: u8,
-    system_program: &Program<'info, System>,
-    token_program: &Program<'info, Token>,
-    associated_token_program: &Program<'info, AssociatedToken>,
+    system_program: &AccountInfo<'info>,
+    token_program: &AccountInfo<'info>,
+    associated_token_program: &AccountInfo<'info>,
 ) -> Result<()> {
     let ata = associated_token::get_associated_token_address(&authority.key(), &token_mint.key());
 
@@ -334,6 +370,7 @@ fn init_token_account_if_needed<'info>(
 
     Ok(())
 }
+
 fn get_account<'b, 'info>(
     remaining_accounts: &'b [AccountInfo<'info>],
     index: usize,

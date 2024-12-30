@@ -276,6 +276,7 @@ func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []
 	}
 
 	accounts := []models.Account{
+		{Address: models.GetGringotts(chain), IsSigner: false, IsWritable: false},
 		{Address: models.GetVault(chain), IsSigner: false, IsWritable: true},
 		{Address: solana.SPLAssociatedTokenAccountProgramID.String(), IsSigner: false, IsWritable: false},
 		{Address: solana.TokenProgramID.String(), IsSigner: false, IsWritable: false},
@@ -287,7 +288,6 @@ func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []
 			models.Account{Address: transaction.Recipient, IsSigner: false, IsWritable: transaction.ToToken == ""},
 		)
 
-		// Stable transfer
 		if transaction.Swap == nil {
 			accounts = append(accounts,
 				models.Account{Address: transaction.ToToken, IsSigner: false, IsWritable: false},
@@ -333,10 +333,20 @@ func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []
 	}
 
 	metadata := []byte{byte(len(accountsMap))}
-	addressMap := make(map[string]int)
-	i := 0
+	addressMap := map[string]int{
+		models.GetGringotts(chain):                         0,
+		models.GetVault(chain):                             1,
+		solana.SPLAssociatedTokenAccountProgramID.String(): 2,
+		solana.TokenProgramID.String():                     3,
+		solana.SystemProgramID.String():                    4,
+	}
 
+	i := 5
 	for _, account := range accountsMap {
+		if _, ok := addressMap[account.Address]; ok {
+			continue
+		}
+
 		addressBytes := base58.Decode(account.Address)
 		metadata = append(metadata, addressBytes...)
 		if account.IsWritable {

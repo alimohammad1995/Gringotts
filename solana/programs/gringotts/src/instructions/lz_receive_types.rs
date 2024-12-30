@@ -1,6 +1,8 @@
 use crate::msg_codec::{ChainTransfer, Message, CHAIN_TRANSFER_TYPE};
 use crate::state::Gringotts;
 use crate::*;
+use anchor_spl::associated_token::AssociatedToken;
+use anchor_spl::token::Token;
 use oapp::endpoint_cpi::{get_accounts_for_clear, LzAccount};
 
 #[derive(Accounts)]
@@ -15,6 +17,11 @@ impl LzReceiveTypes<'_> {
         params: &LzReceiveParams,
     ) -> Result<Vec<LzAccount>> {
         let gringotts = &ctx.accounts.gringotts;
+
+        let (vault, _) = Pubkey::find_program_address(
+            &[VAULT_SEED],
+            ctx.program_id,
+        );
 
         let (self_peer, _) = Pubkey::find_program_address(
             &[PEER_SEED, &gringotts.lz_eid.to_le_bytes()],
@@ -38,6 +45,26 @@ impl LzReceiveTypes<'_> {
             },
             LzAccount {
                 pubkey: peer,
+                is_signer: false,
+                is_writable: false,
+            },
+            LzAccount {
+                pubkey: vault.key(),
+                is_signer: false,
+                is_writable: true,
+            },
+            LzAccount {
+                pubkey: AssociatedToken::id().key(),
+                is_signer: false,
+                is_writable: false,
+            },
+            LzAccount {
+                pubkey: Token::id().key(),
+                is_signer: false,
+                is_writable: false,
+            },
+            LzAccount {
+                pubkey: System::id().key(),
                 is_signer: false,
                 is_writable: false,
             },

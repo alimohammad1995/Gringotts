@@ -4,32 +4,28 @@
 resolution = true
 skip-lint = false
 
-[programs.localnet]
-gringotts = "72pz8Jag6nMPT8uFtwv3TWA534Ej4ut8VrHHCDY1GrpK"
-
 [programs.devnet]
-gringotts = "72pz8Jag6nMPT8uFtwv3TWA534Ej4ut8VrHHCDY1GrpK"
+gringotts = "BFKTaMXC9GiM2nydmYfNLTaxr2WTzANQH888G3dYbW6W"
+
+[programs.localnet]
+gringotts = "BFKTaMXC9GiM2nydmYfNLTaxr2WTzANQH888G3dYbW6W"
 
 [programs.mainnet]
-gringotts = "72pz8Jag6nMPT8uFtwv3TWA534Ej4ut8VrHHCDY1GrpK"
-
+gringotts = "Up3RApFZC654LGNSjKtEgVVdsfW7XANLaYFjP81vShM"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-#cluster = "https://lively-prettiest-darkness.solana-mainnet.quiknode.pro/24c396ae999b77995e1355d6d475338fb963abcc"
-cluster = "mainnet"
-#cluster = "devnet"
-#cluster = "localnet"
+cluster = "Mainnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+bridge = "ts-node --transpile-only ./scripts/bridge.ts"
+bridge-prod = "ts-node --transpile-only ./scripts/bridge-prod.ts"
+estimate = "ts-node --transpile-only ./scripts/estimate.ts"
 init = "ts-node --transpile-only ./scripts/init.ts"
 init-prod = "ts-node --transpile-only ./scripts/init-prod.ts"
 price = "ts-node --transpile-only ./scripts/get_price.ts"
-estimate = "ts-node --transpile-only ./scripts/estimate.ts"
-bridge = "ts-node --transpile-only ./scripts/bridge.ts"
-bridge-prod = "ts-node --transpile-only ./scripts/bridge-prod.ts"
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
 withdraw = "ts-node --transpile-only ./scripts/withdraw.ts"

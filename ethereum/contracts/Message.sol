@@ -5,10 +5,10 @@ import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 uint8 constant MessageTypeChainTransfer = 1;
 
-    struct Message {
-        uint8 header;
-        bytes payload;
-    }
+struct Message {
+    uint8 header;
+    bytes payload;
+}
 
 library MessageLibrary {
     function create(

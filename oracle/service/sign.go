@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	solana "github.com/blocto/solana-go-sdk/common"
 	"github.com/blocto/solana-go-sdk/types"
 	"github.com/btcsuite/btcutil/base58"
@@ -240,6 +241,8 @@ func createEVMTransaction(
 					Metadata:    utils.FromHex(transaction.Swap.MetaData),
 					StableToken: utils.ToByte32(transaction.FromToken),
 				}
+
+				fmt.Println(transaction.Swap.MetaData)
 			}
 
 			transactionItems[i] = transactionItem
@@ -250,6 +253,8 @@ func createEVMTransaction(
 			Metadata: getMetaData(chain, transactions),
 			Items:    transactionItems,
 		})
+
+		fmt.Println(utils.ToHex(getMetaData(chain, transactions)))
 	}
 
 	request := connection.GringottsBridgeRequest{

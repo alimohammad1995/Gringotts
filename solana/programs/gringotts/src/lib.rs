@@ -10,7 +10,7 @@ use instructions::*;
 
 use oapp::{endpoint_cpi::LzAccount, LzReceiveParams};
 
-declare_id!("72pz8Jag6nMPT8uFtwv3TWA534Ej4ut8VrHHCDY1GrpK");
+declare_id!("Up3RApFZC654LGNSjKtEgVVdsfW7XANLaYFjP81vShM");
 
 pub const MAX_TRANSFERS: u8 = 4;
 pub const MAX_PRICE_AGE: u64 = 5 * 60;
@@ -45,6 +45,10 @@ pub mod gringotts {
 
     pub fn token_withdraw(ctx: Context<TokenWithdraw>, params: TokenWithdrawParams) -> Result<()> {
         TokenWithdraw::apply(ctx, &params)
+    }
+
+    pub fn token_fund(ctx: Context<TokenFund>, params: TokenFundParams) -> Result<()> {
+        TokenFund::apply(ctx, &params)
     }
 
     pub fn vault_withdraw(ctx: Context<VaultWithdraw>, params: VaultWithdrawParams) -> Result<()> {

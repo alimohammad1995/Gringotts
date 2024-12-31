@@ -21,7 +21,8 @@ const SOL_EID = 30168;
 const ARB_CHAIN_ID = 1;
 const SOL_CHAIN_ID = 2;
 
-const ARB_ADDRESS = "0x9c4E6e7e2f2387c3fd9fccc499c18D6c98528931";
+const ARB_ADDRESS = "0x7794d4260bf7c0c975dd0df59c4f67c1631eea51";
+
 const ARB_USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
 const SOL_USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
@@ -191,6 +192,8 @@ async function setOappExecutor(remote: number) {
 async function main() {
     const chainID = ARB_EID;
     const peer = utils.arrayify(utils.hexZeroPad(ARB_ADDRESS, 32));
+
+    console.log("Gringotts PDA", gringottsPDA.toBase58());
 
     // await init();
     // await addPeer(ARB_CHAIN_ID, chainID, peer); // ARB

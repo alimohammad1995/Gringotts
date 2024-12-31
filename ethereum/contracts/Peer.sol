@@ -7,12 +7,8 @@ import {Gringotts} from "./Gringotts.sol";
 struct Peer {
     ChainId chainID;
     GringottsAddress endpoint;
-
     uint32 lzEID;
-    uint8 inboundLimit;
-
     GringottsAddress[] stableCoins;
-
     uint128 baseGasEstimate;
 }
 

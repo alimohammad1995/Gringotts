@@ -41,12 +41,8 @@ library ChainTransferLibrary {
             });
         }
 
-        // Read messageLength (uint16)
-        uint16 messageLength = BytesLib.toUint16(data, offset);
-        offset += 2;
         // Read message (bytes)
-        bytes memory message = BytesLib.slice(data, offset, messageLength);
-        offset += messageLength;
+        bytes memory message = BytesLib.slice(data, offset, data.length - offset);
 
         return ChainTransfer({
             message: message,
@@ -62,14 +58,13 @@ library ChainTransferLibrary {
 
             encoded = abi.encodePacked(
                 encoded,
-                item.amountUSDX                // uint64 (8 bytes)
+                item.amountUSDX                 // uint64 (8 bytes)
             );
         }
 
         encoded = abi.encodePacked(
             encoded,
-            uint16(chainTransfer.message.length),   // uint16 (2 bytes)
-            chainTransfer.message                   // bytes
+            chainTransfer.message               // bytes
         );
 
         return encoded;

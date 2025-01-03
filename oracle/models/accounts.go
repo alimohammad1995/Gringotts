@@ -18,7 +18,7 @@ type Account struct {
 	Address    string `json:"address"`
 	IsWritable bool   `json:"is_writable"`
 	IsSigner   bool   `json:"is_signer"`
-	Index      uint8  `json:"index"`
+	Index      int    `json:"index"`
 }
 
 type AccountModel struct {
@@ -82,7 +82,7 @@ func GetGringotts(chain Blockchain) string {
 }
 
 func GetPeer(chain Blockchain, destination Blockchain) string {
-	return GetPDA(chain, [][]byte{[]byte(PeerSeed), utils.ToLittleEndianBytes(destination.GetLzEId())}).String()
+	return GetPDA(chain, [][]byte{[]byte(PeerSeed), utils.ToBigEndianBytes(destination.GetLzEId())}).String()
 }
 
 func GetVault(chain Blockchain) string {

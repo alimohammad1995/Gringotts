@@ -1,4 +1,4 @@
-use crate::msg_codec::{ChainTransfer, Message, CHAIN_TRANSFER_TYPE};
+use crate::msg_codec::{ChainTransfer, Message, SolanaTransfer, CHAIN_TRANSFER_TYPE};
 use crate::state::Gringotts;
 use crate::*;
 use anchor_spl::associated_token::AssociatedToken;
@@ -24,11 +24,11 @@ impl LzReceiveTypes<'_> {
         );
 
         let (self_peer, _) = Pubkey::find_program_address(
-            &[PEER_SEED, &gringotts.lz_eid.to_le_bytes()],
+            &[PEER_SEED, &gringotts.lz_eid.to_be_bytes()],
             ctx.program_id,
         );
         let (peer, _) = Pubkey::find_program_address(
-            &[PEER_SEED, &params.src_eid.to_le_bytes()],
+            &[PEER_SEED, &params.src_eid.to_be_bytes()],
             ctx.program_id,
         );
 
@@ -74,21 +74,17 @@ impl LzReceiveTypes<'_> {
 
         if message.header == CHAIN_TRANSFER_TYPE {
             let chain_transfer = ChainTransfer::decode(message.payload);
+            let solana_transfer = SolanaTransfer::decode(chain_transfer.message, chain_transfer.items.len());
 
-            let account_size = chain_transfer.metadata[0] as usize;
-            let mut m_index = 1;
+            for i in 0..solana_transfer.accounts_address.len() {
+                let is_writeable_flag_index = i / 8;
+                let is_writeable_flag_mask = 7 - (i % 8);
 
-            for _ in 0..account_size {
                 accounts.push(LzAccount {
-                    pubkey: Pubkey::new_from_array(
-                        chain_transfer.metadata[m_index..m_index + 32]
-                            .try_into()
-                            .unwrap(),
-                    ),
-                    is_writable: chain_transfer.metadata[m_index + 32] == 1,
+                    pubkey: Pubkey::new_from_array(*solana_transfer.accounts_address[i]),
+                    is_writable: solana_transfer.accounts_flags[is_writeable_flag_index] & (1 << is_writeable_flag_mask) != 0,
                     is_signer: false,
                 });
-                m_index += 33
             }
         }
 

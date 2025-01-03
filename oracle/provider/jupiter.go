@@ -89,10 +89,10 @@ func (o *Jupiter) swap(quoteResponse map[string]interface{}, recipient string) m
 
 func (o *Jupiter) quote(from string, to string, amount *uint256.Int, slippageBPS int) map[string]interface{} {
 	if len(from) == 0 {
-		from = SOL
+		from = WSOL
 	}
 	if len(to) == 0 {
-		to = SOL
+		to = WSOL
 	}
 
 	queryParams := map[string]string{
@@ -117,5 +117,5 @@ func (o *Jupiter) quote(from string, to string, amount *uint256.Int, slippageBPS
 	return result
 }
 
-const SOL = "So11111111111111111111111111111111111111112"
+const WSOL = "So11111111111111111111111111111111111111112"
 const JupiterAddress = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"

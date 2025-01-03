@@ -4,7 +4,7 @@ use crate::*;
 #[derive(Accounts)]
 #[instruction(params: PeerUpdateParams)]
 pub struct PeerUpdate<'info> {
-    #[account(mut, seeds = [PEER_SEED, &params.lz_eid.to_le_bytes()], bump = peer.bump)]
+    #[account(mut, seeds = [PEER_SEED, &params.lz_eid.to_be_bytes()], bump = peer.bump)]
     pub peer: Account<'info, Peer>,
     #[account(has_one = owner, seeds = [GRINGOTTS_SEED], bump = gringotts.bump)]
     pub gringotts: Account<'info, Gringotts>,

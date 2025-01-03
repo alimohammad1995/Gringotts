@@ -23,10 +23,10 @@ type InboundTransactionItemRequest struct {
 }
 
 type TransactionRequest struct {
-	User        string                                                 `json:"user"`
-	SrcItems    map[models.Blockchain][]InboundTransactionItemRequest  `json:"src_items"`
-	DstItems    map[models.Blockchain][]OutboundTransactionItemRequest `json:"dst_items"`
-	SlippageBPS int                                                    `json:"slippage_bps"`
+	User        string                                                  `json:"user"`
+	SrcItems    map[models.Blockchain][]*InboundTransactionItemRequest  `json:"src_items"`
+	DstItems    map[models.Blockchain][]*OutboundTransactionItemRequest `json:"dst_items"`
+	SlippageBPS int                                                     `json:"slippage_bps"`
 }
 
 type TransactionResponse struct {
@@ -192,7 +192,6 @@ func transform(transaction *provider.Transaction) *models.Transaction {
 		out.Swap = &models.Swap{
 			Executor:      transaction.Swap.ExecutorAddress,
 			Command:       transaction.Swap.Command,
-			MetaData:      transaction.Swap.Metadata,
 			Accounts:      accounts,
 			AddressLookup: transaction.Swap.AddressLookup,
 		}

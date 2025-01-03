@@ -30,8 +30,18 @@ func ToByte32(input string) [32]byte {
 	return bytes32
 }
 
+func FromByte32ToByte(input string) []byte {
+	x := ToByte32(input)
+	return x[:]
+}
+
 func ToByte32SOL(input string) [32]byte {
 	var bytes32 [32]byte
 	copy(bytes32[:], base58.Decode(input))
 	return bytes32
+}
+
+func FromByte32ToByteSOL(input string) []byte {
+	x := ToByte32SOL(input)
+	return x[:]
 }

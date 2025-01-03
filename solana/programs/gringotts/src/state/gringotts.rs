@@ -5,6 +5,7 @@ use anchor_lang::prelude::*;
 pub struct Gringotts {
     pub owner: Pubkey,
     pub bump: u8,
+    pub vault_bump: u8,
     pub chain_id: u8,
 
     pub lz_eid: u32,

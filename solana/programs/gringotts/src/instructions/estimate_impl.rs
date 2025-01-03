@@ -1,10 +1,9 @@
 use crate::instructions::{
     EstimateErrorCode, EstimateOutboundDetails, EstimateRequest, EstimateResponse,
 };
-use crate::msg_codec::{ChainTransfer, ChainTransferItem, Message, CHAIN_TRANSFER_TYPE};
 use crate::state::{Gringotts, Peer};
 use crate::utils::{bps, change_decimals, micro_bps, OptionsBuilder};
-use crate::{CHAIN_TRANSFER_DECIMALS, MAX_PRICE_AGE, MAX_TRANSFERS, NETWORK_DECIMALS};
+use crate::{CHAIN_TRANSFER_DECIMALS, MAX_PRICE_AGE, NETWORK_DECIMALS};
 use anchor_lang::prelude::{Account, AccountInfo, Clock, Result, SolanaSysvar};
 use anchor_lang::{require, Key};
 use oapp::endpoint::instructions::QuoteParams;
@@ -23,65 +22,24 @@ pub fn estimate_marketplace(
 ) -> Result<EstimateResponse> {
     let mut total_transfer_gas_price = 0u64;
 
-    let mut total_transfers = 0;
     let mut outbound_metadata = Vec::with_capacity(request.outbounds.len());
 
     for i in 0usize..request.outbounds.len() {
         let outbound = &request.outbounds[i];
         let peer = &peers[i];
 
-        require!(
-            outbound.chain_id == peer.chain_id,
-            EstimateErrorCode::InvalidParams
-        );
+        require!(outbound.chain_id == peer.chain_id, EstimateErrorCode::InvalidParams);
 
-        let mut chain_execution_gas_price = peer.base_gas_estimate;
-
-        let mut chain_transfer_items = Vec::with_capacity(outbound.items.len());
-
-        let mut command_storage = Vec::new();
-        let mut metadata_storage = Vec::new();
-
-        for j in 0usize..outbound.items.len() {
-            let item = &outbound.items[j];
-            command_storage.push(vec![0u8; item.command_length as usize]);
-            metadata_storage.push(vec![0u8; item.metadata_length as usize]);
-        }
-
-        for j in 0usize..outbound.items.len() {
-            let item = &outbound.items[j];
-
-            chain_transfer_items.push(ChainTransferItem {
-                amount_usdx: 0,
-                asset: &[0; 32],
-                recipient: &[0; 32],
-                executor: &[0; 32],
-                stable_token: &[0; 32],
-                command: command_storage[j].as_slice(),
-                metadata: command_storage[j].as_slice(),
-            });
-
-            chain_execution_gas_price = chain_execution_gas_price + item.execution_gas;
-            total_transfers += 1;
-        }
+        let chain_execution_gas_price = peer.base_gas_estimate + outbound.execution_gas;
 
         let mut builder = OptionsBuilder::new();
         builder.add_executor_lz_receive_option(chain_execution_gas_price, 0);
-
-        let metadata = vec![0u8; outbound.metadata_length as usize];
-        let chain_transfer = ChainTransfer {
-            items: chain_transfer_items,
-            metadata: metadata.as_slice(),
-        };
-
-        let encoded_chain_transfer = chain_transfer.encode();
-        let message = Message::new(CHAIN_TRANSFER_TYPE, encoded_chain_transfer.as_slice());
 
         let quote_params = QuoteParams {
             sender: gringotts.key(),
             dst_eid: peer.lz_eid,
             receiver: peer.address,
-            message: vec![0; message.encode().len()],
+            message: vec![0; outbound.message_length as usize],
             pay_in_lz_token: false,
             options: builder.clone().options(),
         };
@@ -93,8 +51,7 @@ pub fn estimate_marketplace(
                 &quote_accounts[i * LZ_SEND_ACCOUNTS_LEN..(i + 1) * LZ_SEND_ACCOUNTS_LEN],
             );
         } else {
-            oapp_quote_accounts =
-                quote_accounts[i * LZ_QUOTE_ACCOUNTS_LEN..(i + 1) * LZ_QUOTE_ACCOUNTS_LEN].to_vec();
+            oapp_quote_accounts = quote_accounts[i * LZ_QUOTE_ACCOUNTS_LEN..(i + 1) * LZ_QUOTE_ACCOUNTS_LEN].to_vec();
         }
 
         let quote = oapp::endpoint_cpi::quote(
@@ -124,11 +81,6 @@ pub fn estimate_marketplace(
         total_transfer_gas_price = total_transfer_gas_price + quote.native_fee;
     }
 
-    require!(
-        total_transfers <= MAX_TRANSFERS,
-        EstimateErrorCode::InvalidParams
-    );
-
     let commission_usdx = micro_bps(request.inbound.amount_usdx, gringotts.commission_micro_bps);
     let transfer_gas_usdx = get_native_price(total_transfer_gas_price, CHAIN_TRANSFER_DECIMALS, gringotts.pyth_price_feed_id, &price_feed)?;
 
@@ -156,9 +108,7 @@ pub fn get_native_price(
     price_feed: &PriceUpdateV2,
 ) -> Result<u64> {
     let price = price_feed.get_price_no_older_than(&Clock::get()?, MAX_PRICE_AGE, &feed_id)?;
-
-    let asset_price = amount * (u64::try_from(price.price)? + price.conf)
-        / 10u64.pow(u32::try_from(-price.exponent)?);
+    let asset_price = amount * (u64::try_from(price.price)? + price.conf) / 10u64.pow(u32::try_from(-price.exponent)?);
 
     Ok(change_decimals(asset_price, NETWORK_DECIMALS, decimals))
 }

@@ -1,6 +1,6 @@
-use crate::msg_codec::{ChainTransfer, Message, CHAIN_TRANSFER_TYPE};
+use crate::msg_codec::{ChainTransfer, Message, SolanaTransfer, CHAIN_TRANSFER_TYPE};
 use crate::state::{Gringotts, Peer};
-use crate::utils::change_decimals;
+use crate::utils::{change_decimals, NATIVE_MINT};
 use crate::*;
 use anchor_spl::associated_token::AssociatedToken;
 use anchor_spl::token::{CloseAccount, Mint, Token, TokenAccount, Transfer};
@@ -14,17 +14,13 @@ use oapp::endpoint::ConstructCPIContext;
 pub struct LzReceive<'info> {
     #[account(seeds = [GRINGOTTS_SEED], bump = gringotts.bump)]
     pub gringotts: Account<'info, Gringotts>,
-    #[account(
-        seeds = [PEER_SEED, &gringotts.lz_eid.to_le_bytes()],
-        bump = self_peer.bump
-    )]
+
+    #[account(seeds = [PEER_SEED, &gringotts.lz_eid.to_be_bytes()], bump = self_peer.bump)]
     pub self_peer: Account<'info, Peer>,
-    #[account(
-        seeds = [PEER_SEED, &params.src_eid.to_le_bytes()],
-        bump = peer.bump,
-        constraint = params.sender == peer.address
-    )]
+
+    #[account( seeds = [PEER_SEED, &params.src_eid.to_be_bytes()], bump = peer.bump, constraint = params.sender == peer.address)]
     pub peer: Account<'info, Peer>,
+
     #[account(mut, seeds = [VAULT_SEED], bump)]
     pub vault: SystemAccount<'info>,
 
@@ -45,7 +41,7 @@ impl<'info> LzReceive<'info> {
         let self_peer = &ctx.accounts.self_peer;
         let peer = &ctx.accounts.peer;
 
-        let all_accounts: Vec<AccountInfo<'info>> = ctx.remaining_accounts
+        let remaining_accounts: &Vec<AccountInfo<'info>> = &ctx.remaining_accounts
             .iter()
             .map(|account| account.to_account_info())
             .chain([
@@ -56,7 +52,6 @@ impl<'info> LzReceive<'info> {
                 ctx.accounts.system_program.to_account_info(),
             ])
             .collect();
-        let remaining_accounts = &all_accounts;
 
         let mut r = 0;
 
@@ -64,35 +59,35 @@ impl<'info> LzReceive<'info> {
 
         if message.header == CHAIN_TRANSFER_TYPE {
             let chain_transfer = ChainTransfer::decode(message.payload);
+            let solana_transfer = SolanaTransfer::decode(chain_transfer.message, chain_transfer.items.len());
 
-            let accounts_count = chain_transfer.metadata[0] as usize;
-            let mappings = &chain_transfer.metadata[accounts_count * 33 + 1..];
+            let mappings = solana_transfer.accounts_mapping;
 
-            let vault = get_account(remaining_accounts, r, mappings);
-            let (_, vault_bump) = Pubkey::find_program_address(&[VAULT_SEED], ctx.program_id);
+            let vault = &ctx.accounts.vault;
+            let vault_bump = ctx.bumps.vault;
 
-            let system_program = get_account(remaining_accounts, r + 1, mappings);
-            let token_program = get_account(remaining_accounts, r + 2, mappings);
-            let associated_token_program = get_account(remaining_accounts, r + 3, mappings);
+            let system_program = &ctx.accounts.system_program.to_account_info();
+            let token_program = &ctx.accounts.token_program.to_account_info();
+            let associated_token_program = &ctx.accounts.associated_token_program.to_account_info();
 
-            r += 4;
+            for i in 0..solana_transfer.accounts_address.len() {
+                let chain_item = &chain_transfer.items[i];
 
-            for item in &chain_transfer.items {
-                let recipient = &remaining_accounts[r];
-                r += 1;
+                let recipient = get_account(remaining_accounts, r, mappings);
 
-                if self_peer.has_stable_coin(*item.asset) {
-                    let stable_coin_mint = get_account(remaining_accounts, r, mappings);
-                    let mut data = &stable_coin_mint.try_borrow_data()?[..];
-                    let stable_coin_info = Mint::try_deserialize(&mut data)?;
+                let desired_token_mint_account = get_account(remaining_accounts, r + 1, mappings);
+                let desired_token_mint_info = Mint::try_deserialize(&mut &desired_token_mint_account.try_borrow_data()?[..])?;
 
-                    let gringotts_stable_coin_account = get_account(remaining_accounts, r + 1, mappings);
-                    let recipient_stable_coin_account = get_account(remaining_accounts, r + 2, mappings);
+                r += 2;
+
+                if self_peer.has_stable_coin(desired_token_mint_account.key().to_bytes()) {
+                    let gringotts_stable_coin_account = get_account(remaining_accounts, r, mappings);
+                    let recipient_stable_coin_account = get_account(remaining_accounts, r + 1, mappings);
 
                     init_token_account_if_needed(
                         &recipient_stable_coin_account.to_account_info(),
                         &recipient.to_account_info(),
-                        stable_coin_mint,
+                        desired_token_mint_account,
                         vault,
                         vault_bump,
                         system_program,
@@ -112,30 +107,30 @@ impl<'info> LzReceive<'info> {
 
                     token::transfer(
                         cpi_ctx,
-                        change_decimals(item.amount_usdx, CHAIN_TRANSFER_DECIMALS, stable_coin_info.decimals),
+                        change_decimals(chain_item.amount_usdx, CHAIN_TRANSFER_DECIMALS, desired_token_mint_info.decimals),
                     )?;
 
-                    r += 3;
-                } else if *item.asset != [0; 32] {
-                    let stable_coin_mint = get_account(remaining_accounts, r, mappings);
-                    let mut data = &stable_coin_mint.try_borrow_data()?[..];
-                    let stable_coin_mint_info = Mint::try_deserialize(&mut data)?;
+                    r += 2;
+                } else if desired_token_mint_account.key() != NATIVE_MINT {
+                    let solana_item = solana_transfer.items[i].clone().unwrap();
 
-                    let gringotts_stable_coin_account = get_account(remaining_accounts, r + 1, mappings);
-                    let mut data = &gringotts_stable_coin_account.try_borrow_data()?[..];
-                    let stable_coin_info = TokenAccount::try_deserialize(&mut data)?;
+                    let recipient_desired_token_account = get_account(remaining_accounts, r, mappings);
+                    let recipient_stable_coin_account = get_account(remaining_accounts, r + 1, mappings);
 
-                    let desired_token_mint = get_account(remaining_accounts, r + 2, mappings);
-                    let recipient_desired_token_account = get_account(remaining_accounts, r + 3, mappings);
+                    let stable_coin_mint_account = get_account(remaining_accounts, r + 2, mappings);
+                    let stable_coin_mint_info = Mint::try_deserialize(&mut &stable_coin_mint_account.try_borrow_data()?[..])?;
+
+                    let gringotts_stable_coin_account = get_account(remaining_accounts, r + 3, mappings);
+                    let gringotts_stable_coin_info = TokenAccount::try_deserialize(&mut &gringotts_stable_coin_account.try_borrow_data()?[..])?;
+
                     let swap_program = get_account(remaining_accounts, r + 4, mappings);
-                    let recipient_stable_coin_account = get_account(remaining_accounts, r + 5, mappings);
 
-                    r = r + 6;
+                    r = r + 5;
 
                     init_token_account_if_needed(
                         &recipient_desired_token_account.to_account_info(),
                         &recipient.to_account_info(),
-                        desired_token_mint,
+                        desired_token_mint_account,
                         vault,
                         vault_bump,
                         system_program,
@@ -143,76 +138,64 @@ impl<'info> LzReceive<'info> {
                         associated_token_program,
                     )?;
 
-                    let swap_account_counts = item.metadata[0] as usize;
-                    let swap_accounts = get_accounts(remaining_accounts, r, r + swap_account_counts, mappings);
+                    let swap_account_counts = solana_item.swap_account_count;
+                    let swap_accounts = get_accounts(remaining_accounts, r, r + swap_account_counts as usize, mappings);
 
-                    let before_swap_stable_coin_amount = stable_coin_info.amount;
+                    let before_swap_stable_coin_amount = gringotts_stable_coin_info.amount;
 
                     let res = swap_on_jupiter(
                         gringotts,
                         swap_program,
                         swap_accounts.as_slice(),
-                        item.command.to_vec(),
+                        solana_item.swap_command.to_vec(),
                     );
 
                     r = r + swap_account_counts;
 
                     if res.is_ok() {
-                        let mut data = &gringotts_stable_coin_account.try_borrow_data()?[..];
-                        let stable_coin_info = TokenAccount::try_deserialize(&mut data)?;
-                        let swap_stable_coin_use = before_swap_stable_coin_amount - stable_coin_info.amount;
+                        let gringotts_stable_coin_info = TokenAccount::try_deserialize(&mut &gringotts_stable_coin_account.try_borrow_data()?[..])?;
+                        let swap_stable_coin_use = before_swap_stable_coin_amount - gringotts_stable_coin_info.amount;
 
                         require!(
-                            change_decimals(swap_stable_coin_use, stable_coin_mint_info.decimals, CHAIN_TRANSFER_DECIMALS) <= item.amount_usdx,
+                            change_decimals(swap_stable_coin_use, stable_coin_mint_info.decimals, CHAIN_TRANSFER_DECIMALS) <= chain_item.amount_usdx,
                             LzReceiveErrorCode::InvalidParams
                         );
                     } else {
-                        init_token_account_if_needed(
+                        fallback(
+                            chain_item.amount_usdx,
+                            gringotts,
+                            gringotts_stable_coin_account,
+                            recipient,
                             recipient_stable_coin_account,
-                            &recipient.to_account_info(),
-                            stable_coin_mint,
+                            stable_coin_mint_account,
+                            &stable_coin_mint_info,
                             vault,
                             vault_bump,
                             system_program,
                             token_program,
                             associated_token_program,
                         )?;
-
-                        let cpi_ctx = CpiContext::new_with_signer(
-                            token_program.to_account_info(),
-                            Transfer {
-                                from: gringotts_stable_coin_account.to_account_info(),
-                                to: recipient_stable_coin_account.to_account_info(),
-                                authority: gringotts.to_account_info(),
-                            },
-                            signer_seeds,
-                        );
-
-                        token::transfer(
-                            cpi_ctx,
-                            change_decimals(item.amount_usdx, CHAIN_TRANSFER_DECIMALS, stable_coin_mint_info.decimals),
-                        )?;
                     }
                 } else {
-                    let stable_coin_mint = get_account(remaining_accounts, r, mappings);
-                    let mut data = &stable_coin_mint.try_borrow_data()?[..];
-                    let stable_coin_mint_info = Mint::try_deserialize(&mut data)?;
+                    let solana_item = solana_transfer.items[i].clone().unwrap();
 
-                    let gringotts_stable_coin_account = get_account(remaining_accounts, r + 1, mappings);
-                    let mut data = &gringotts_stable_coin_account.try_borrow_data()?[..];
-                    let stable_coin_info = TokenAccount::try_deserialize(&mut data)?;
+                    let gringotts_native_account = get_account(remaining_accounts, r, mappings);
+                    let recipient_stable_coin_account = get_account(remaining_accounts, r + 1, mappings);
 
-                    let native_mint = get_account(remaining_accounts, r + 2, mappings);
-                    let gringotts_native_account = get_account(remaining_accounts, r + 3, mappings);
+                    let stable_coin_mint_account = get_account(remaining_accounts, r + 2, mappings);
+                    let stable_coin_mint_info = Mint::try_deserialize(&mut &stable_coin_mint_account.try_borrow_data()?[..])?;
+
+                    let gringotts_stable_coin_account = get_account(remaining_accounts, r + 3, mappings);
+                    let gringotts_stable_coin_info = TokenAccount::try_deserialize(&mut &gringotts_stable_coin_account.try_borrow_data()?[..])?;
+
                     let swap_program = get_account(remaining_accounts, r + 4, mappings);
-                    let recipient_stable_coin_account = get_account(remaining_accounts, r + 5, mappings);
 
                     r = r + 6;
 
                     init_token_account_if_needed(
                         &gringotts_native_account.to_account_info(),
                         &gringotts.to_account_info(),
-                        native_mint,
+                        desired_token_mint_account,
                         vault,
                         vault_bump,
                         system_program,
@@ -220,27 +203,26 @@ impl<'info> LzReceive<'info> {
                         associated_token_program,
                     )?;
 
-                    let swap_account_counts = item.metadata[0] as usize;
-                    let swap_accounts = get_accounts(remaining_accounts, r, r + swap_account_counts, mappings);
+                    let swap_account_counts = solana_item.swap_account_count;
+                    let swap_accounts = get_accounts(remaining_accounts, r, r + swap_account_counts as usize, mappings);
 
-                    let before_swap_stable_coin_amount = stable_coin_info.amount;
+                    let before_swap_stable_coin_amount = gringotts_stable_coin_info.amount;
 
                     let res = swap_on_jupiter(
                         gringotts,
                         swap_program,
                         swap_accounts.as_slice(),
-                        item.command.to_vec(),
+                        solana_item.swap_command.to_vec(),
                     );
 
-                    r = r + swap_account_counts;
+                    r = r + swap_account_counts as usize;
 
                     if res.is_ok() {
-                        let mut data = &gringotts_stable_coin_account.try_borrow_data()?[..];
-                        let stable_coin_info = TokenAccount::try_deserialize(&mut data)?;
-                        let swap_stable_coin_use = before_swap_stable_coin_amount - stable_coin_info.amount;
+                        let gringotts_stable_coin_info = TokenAccount::try_deserialize(&mut &gringotts_stable_coin_account.try_borrow_data()?[..])?;
+                        let swap_stable_coin_use = before_swap_stable_coin_amount - gringotts_stable_coin_info.amount;
 
                         require!(
-                            change_decimals(swap_stable_coin_use, stable_coin_mint_info.decimals, CHAIN_TRANSFER_DECIMALS) <= item.amount_usdx,
+                            change_decimals(swap_stable_coin_use, stable_coin_mint_info.decimals, CHAIN_TRANSFER_DECIMALS) <= chain_item.amount_usdx,
                             LzReceiveErrorCode::InvalidParams
                         );
 
@@ -251,30 +233,19 @@ impl<'info> LzReceive<'info> {
                             token_program,
                         )?;
                     } else {
-                        init_token_account_if_needed(
+                        fallback(
+                            chain_item.amount_usdx,
+                            gringotts,
+                            gringotts_stable_coin_account,
+                            recipient,
                             recipient_stable_coin_account,
-                            &recipient.to_account_info(),
-                            stable_coin_mint,
+                            stable_coin_mint_account,
+                            &stable_coin_mint_info,
                             vault,
                             vault_bump,
                             system_program,
                             token_program,
                             associated_token_program,
-                        )?;
-
-                        let cpi_ctx = CpiContext::new_with_signer(
-                            token_program.to_account_info(),
-                            Transfer {
-                                from: gringotts_stable_coin_account.to_account_info(),
-                                to: recipient_stable_coin_account.to_account_info(),
-                                authority: gringotts.to_account_info(),
-                            },
-                            signer_seeds,
-                        );
-
-                        token::transfer(
-                            cpi_ctx,
-                            change_decimals(item.amount_usdx, CHAIN_TRANSFER_DECIMALS, stable_coin_mint_info.decimals),
                         )?;
                     }
                 }
@@ -299,6 +270,52 @@ impl<'info> LzReceive<'info> {
 
         Ok(())
     }
+}
+
+fn fallback<'info>(
+    amount_usdx: u64,
+    gringotts: &Account<'info, Gringotts>,
+    gringotts_stable_coin_account: &AccountInfo<'info>,
+    recipient: &AccountInfo<'info>,
+    recipient_stable_coin_account: &AccountInfo<'info>,
+    stable_coin_mint_account: &AccountInfo<'info>,
+    stable_coin_mint_info: &Mint,
+    vault: &AccountInfo<'info>,
+    vault_bump: u8,
+    system_program: &AccountInfo<'info>,
+    token_program: &AccountInfo<'info>,
+    associated_token_program: &AccountInfo<'info>,
+) -> Result<()> {
+    let gringotts_seeds: &[&[u8]] = &[GRINGOTTS_SEED, &[gringotts.bump]];
+    let signer_seeds = &[gringotts_seeds];
+
+    init_token_account_if_needed(
+        recipient_stable_coin_account,
+        &recipient.to_account_info(),
+        stable_coin_mint_account,
+        vault,
+        vault_bump,
+        system_program,
+        token_program,
+        associated_token_program,
+    )?;
+
+    let cpi_ctx = CpiContext::new_with_signer(
+        token_program.to_account_info(),
+        Transfer {
+            from: gringotts_stable_coin_account.to_account_info(),
+            to: recipient_stable_coin_account.to_account_info(),
+            authority: gringotts.to_account_info(),
+        },
+        signer_seeds,
+    );
+
+    token::transfer(
+        cpi_ctx,
+        change_decimals(amount_usdx, CHAIN_TRANSFER_DECIMALS, stable_coin_mint_info.decimals),
+    )?;
+
+    Ok(())
 }
 
 fn close_wsol_token<'info>(

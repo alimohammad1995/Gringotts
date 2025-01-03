@@ -2,10 +2,8 @@ package service
 
 import (
 	"context"
-	"fmt"
 	solana "github.com/blocto/solana-go-sdk/common"
 	"github.com/blocto/solana-go-sdk/types"
-	"github.com/btcsuite/btcutil/base58"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/holiman/uint256"
 	"github.com/near/borsh-go"
@@ -51,10 +49,10 @@ func createSolanaTransaction(
 
 		if transaction.Swap != nil {
 			inboundTransfer.Swap = &connection.Swap{
-				Executor:    utils.ToByte32SOL(transaction.Swap.Executor),
-				Command:     utils.FromHex(transaction.Swap.Command),
-				Metadata:    utils.FromHex(transaction.Swap.MetaData),
-				StableToken: utils.ToByte32SOL(transaction.ToToken),
+				Executor:      utils.ToByte32SOL(transaction.Swap.Executor),
+				Command:       utils.FromHex(transaction.Swap.Command),
+				AccountsCount: uint8(len(transaction.Swap.Accounts)),
+				StableToken:   utils.ToByte32SOL(transaction.ToToken),
 			}
 		}
 
@@ -64,32 +62,24 @@ func createSolanaTransaction(
 	outboundTransfers := make([]connection.BridgeOutboundTransfer, 0, len(outTransactions))
 	for chainIter, transactions := range outTransactions {
 		outboundTransferItems := make([]connection.BridgeOutboundTransferItem, len(transactions))
+		totalGas := uint64(0)
 
 		for i, transaction := range transactions {
 			gas, _, _ := GetExecutionParams(chainIter, transaction.ToToken)
 
 			outboundTransferItem := connection.BridgeOutboundTransferItem{
-				Asset:              utils.ToByte32(transaction.ToToken),
-				Recipient:          utils.ToByte32(transaction.Recipient),
-				ExecutionGasAmount: gas,
-				DistributionBP:     uint16(transaction.DistributionBPS),
-			}
-
-			if transaction.Swap != nil {
-				outboundTransferItem.Swap = &connection.Swap{
-					Executor:    utils.ToByte32(transaction.Swap.Executor),
-					Command:     utils.FromHex(transaction.Swap.Command),
-					Metadata:    utils.FromHex(transaction.Swap.MetaData),
-					StableToken: utils.ToByte32(transaction.FromToken),
-				}
+				DistributionBP: uint16(transaction.DistributionBPS),
 			}
 
 			outboundTransferItems[i] = outboundTransferItem
+			totalGas = totalGas + gas
 		}
 
 		outboundTransfers = append(outboundTransfers, connection.BridgeOutboundTransfer{
-			ChainID: chainIter.GetId(),
-			Items:   outboundTransferItems,
+			ChainID:      chainIter.GetId(),
+			ExecutionGas: totalGas,
+			Message:      getMessage(chainIter, transactions),
+			Items:        outboundTransferItems,
 		})
 	}
 
@@ -151,7 +141,6 @@ func createSolanaTransaction(
 					PubKey: solana.PublicKeyFromString(acc.Address), IsSigner: acc.IsSigner, IsWritable: acc.IsWritable,
 				})
 			}
-			transaction.Swap.MetaData = utils.ToHex([]byte{byte(len(transaction.Swap.Accounts))})
 			alts = append(alts, transaction.Swap.AddressLookup...)
 		}
 	}
@@ -205,12 +194,9 @@ func createEVMTransaction(
 		}
 
 		if transaction.Swap != nil {
-			transactionItem.Swap = connection.GringottsSwap{
-				Executor:    utils.ToByte32(transaction.Swap.Executor),
-				Command:     utils.FromHex(transaction.Swap.Command),
-				Metadata:    utils.FromHex(transaction.Swap.MetaData),
-				StableToken: utils.ToByte32(transaction.ToToken),
-			}
+			transactionItem.Command = utils.FromHex(transaction.Swap.Command)
+			transactionItem.Executor = utils.ToByte32(transaction.Swap.Executor)
+			transactionItem.StableToken = utils.ToByte32(transaction.ToToken)
 		}
 
 		if len(transaction.FromToken) == 0 {
@@ -223,38 +209,23 @@ func createEVMTransaction(
 	outboundTransfers := make([]connection.GringottsBridgeOutboundTransfer, 0, len(outTransactions))
 	for chain, transactions := range outTransactions {
 		transactionItems := make([]connection.GringottsBridgeOutboundTransferItem, len(transactions))
+		totalGas := int64(0)
 
 		for i, transaction := range transactions {
 			gas, _, _ := GetExecutionParams(chain, transaction.ToToken)
+			totalGas = totalGas + int64(gas)
 
-			transactionItem := connection.GringottsBridgeOutboundTransferItem{
-				Asset:          utils.ToByte32(transaction.ToToken),
-				Recipient:      utils.ToByte32(transaction.Recipient),
-				ExecutionGas:   big.NewInt(int64(gas)),
+			transactionItems[i] = connection.GringottsBridgeOutboundTransferItem{
 				DistributionBP: uint16(transaction.DistributionBPS),
 			}
-
-			if transaction.Swap != nil {
-				transactionItem.Swap = connection.GringottsSwap{
-					Executor:    utils.ToByte32(transaction.Swap.Executor),
-					Command:     utils.FromHex(transaction.Swap.Command),
-					Metadata:    utils.FromHex(transaction.Swap.MetaData),
-					StableToken: utils.ToByte32(transaction.FromToken),
-				}
-
-				fmt.Println(transaction.Swap.MetaData)
-			}
-
-			transactionItems[i] = transactionItem
 		}
 
 		outboundTransfers = append(outboundTransfers, connection.GringottsBridgeOutboundTransfer{
-			ChainId:  chain.GetId(),
-			Metadata: getMetaData(chain, transactions),
-			Items:    transactionItems,
+			ChainId:      chain.GetId(),
+			Message:      getMessage(chain, transactions),
+			Items:        transactionItems,
+			ExecutionGas: big.NewInt(totalGas),
 		})
-
-		fmt.Println(utils.ToHex(getMetaData(chain, transactions)))
 	}
 
 	request := connection.GringottsBridgeRequest{
@@ -275,69 +246,98 @@ func createEVMTransaction(
 	}, nil
 }
 
-func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []byte {
-	if chain != models.Solana && chain != models.SolanaDev {
-		return make([]byte, 0)
+func getMessage(chain models.Blockchain, transactions []*models.Transaction) []byte {
+	switch chain {
+	case models.Solana, models.SolanaDev:
+		return getMetaData(chain, transactions)
 	}
 
-	accounts := []models.Account{
-		{Address: models.GetGringotts(chain), IsSigner: false, IsWritable: false},
-		{Address: models.GetVault(chain), IsSigner: false, IsWritable: true},
-		{Address: solana.SPLAssociatedTokenAccountProgramID.String(), IsSigner: false, IsWritable: false},
-		{Address: solana.TokenProgramID.String(), IsSigner: false, IsWritable: false},
-		{Address: solana.SystemProgramID.String(), IsSigner: false, IsWritable: false},
+	message := make([]byte, 0, 100)
+	message = append(message, byte(len(transactions)))
+
+	for _, transaction := range transactions {
+		message = append(message, utils.FromByte32ToByte(transaction.ToToken)...)
+		message = append(message, utils.FromByte32ToByte(transaction.Recipient)...)
+
+		if transaction.Swap == nil {
+			message = append(message, 0)
+		} else {
+			message = append(message, 1)
+			message = append(message, utils.FromByte32ToByte(transaction.Swap.Executor)...)
+			message = append(message, utils.FromByte32ToByte(transaction.FromToken)...)
+			message = append(message, utils.FromByte32ToByte(transaction.Swap.Command)...)
+		}
 	}
+
+	return message
+}
+
+func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []byte {
+	accounts := make([]*models.Account, 0)
 
 	for _, transaction := range transactions {
 		accounts = append(accounts,
-			models.Account{Address: transaction.Recipient, IsSigner: false, IsWritable: transaction.ToToken == ""},
+			&models.Account{Address: transaction.Recipient, IsSigner: false, IsWritable: transaction.ToToken == ""},
 		)
 
 		if transaction.Swap == nil {
 			accounts = append(accounts,
-				models.Account{Address: transaction.ToToken, IsSigner: false, IsWritable: false},
-				models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), transaction.ToToken), IsSigner: false, IsWritable: true},
-				models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.ToToken), IsSigner: false, IsWritable: true},
+				&models.Account{Address: transaction.ToToken, IsSigner: false, IsWritable: false},
+
+				&models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), transaction.ToToken), IsSigner: false, IsWritable: true},
+				&models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.ToToken), IsSigner: false, IsWritable: true},
 			)
 		} else {
 			if transaction.ToToken != "" {
 				accounts = append(accounts,
-					models.Account{Address: transaction.FromToken, IsSigner: false, IsWritable: false},
-					models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), transaction.FromToken), IsSigner: false, IsWritable: true},
-					models.Account{Address: transaction.ToToken, IsSigner: false, IsWritable: false},
-					models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.ToToken), IsSigner: false, IsWritable: true},
-					models.Account{Address: provider.JupiterAddress, IsSigner: false, IsWritable: false},
-					models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.FromToken), IsSigner: false, IsWritable: true},
+					&models.Account{Address: transaction.ToToken, IsSigner: false, IsWritable: false},
+					&models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.ToToken), IsSigner: false, IsWritable: true},
 				)
 			} else {
 				accounts = append(accounts,
-					models.Account{Address: transaction.FromToken, IsSigner: false, IsWritable: false},
-					models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), transaction.FromToken), IsSigner: false, IsWritable: true},
-					models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), models.NativeMint), IsSigner: false, IsWritable: true},
-					models.Account{Address: provider.JupiterAddress, IsSigner: false, IsWritable: false},
-					models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.FromToken), IsSigner: false, IsWritable: true},
+					&models.Account{Address: models.NativeMint, IsSigner: false, IsWritable: false},
+					&models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), models.NativeMint), IsSigner: false, IsWritable: true},
 				)
 			}
 
+			accounts = append(accounts,
+				&models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.FromToken), IsSigner: false, IsWritable: true},
+
+				&models.Account{Address: transaction.FromToken, IsSigner: false, IsWritable: false},
+				&models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), transaction.FromToken), IsSigner: false, IsWritable: true},
+
+				&models.Account{Address: provider.JupiterAddress, IsSigner: false, IsWritable: false},
+			)
+
 			for _, acc := range transaction.Swap.Accounts {
 				accounts = append(accounts,
-					models.Account{Address: acc.Address, IsSigner: false, IsWritable: acc.IsWritable},
+					&models.Account{Address: acc.Address, IsSigner: false, IsWritable: acc.IsWritable},
 				)
 			}
 		}
 	}
 
-	accountsMap := make(map[string]models.Account)
+	dontSendAccount := map[string]*models.Account{
+		models.GetGringotts(chain):                         {Address: models.GetGringotts(chain)},
+		models.GetVault(chain):                             {Address: models.GetVault(chain)},
+		solana.SPLAssociatedTokenAccountProgramID.String(): {Address: solana.SPLAssociatedTokenAccountProgramID.String()},
+		solana.TokenProgramID.String():                     {Address: solana.TokenProgramID.String()},
+		solana.SystemProgramID.String():                    {Address: solana.SystemProgramID.String()},
+	}
+
+	accountsMap := make(map[string]*models.Account)
 	for _, account := range accounts {
-		if existingAccount, ok := accountsMap[account.Address]; ok {
-			existingAccount.IsWritable = accountsMap[account.Address].IsWritable || account.IsWritable
-			accountsMap[account.Address] = existingAccount
+		if _, ok := dontSendAccount[account.Address]; ok {
+			continue
+		}
+
+		if _, ok := accountsMap[account.Address]; ok {
+			accountsMap[account.Address].IsWritable = accountsMap[account.Address].IsWritable || account.IsWritable
 		} else {
 			accountsMap[account.Address] = account
 		}
 	}
 
-	metadata := []byte{byte(len(accountsMap))}
 	addressMap := map[string]int{
 		models.GetGringotts(chain):                         0,
 		models.GetVault(chain):                             1,
@@ -346,25 +346,51 @@ func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []
 		solana.SystemProgramID.String():                    4,
 	}
 
-	i := 5
-	for _, account := range accountsMap {
-		if _, ok := addressMap[account.Address]; ok {
-			continue
-		}
+	index := 5
+	flags := ""
 
-		addressBytes := base58.Decode(account.Address)
-		metadata = append(metadata, addressBytes...)
+	metadata := []byte{byte(len(accountsMap))}
+	for _, account := range accountsMap {
+		metadata = append(metadata, utils.FromByte32ToByteSOL(account.Address)...)
+
+		addressMap[account.Address] = index
+		index++
+
 		if account.IsWritable {
-			metadata = append(metadata, 1)
+			flags = flags + "1"
 		} else {
-			metadata = append(metadata, 0)
+			flags = flags + "0"
 		}
-		addressMap[account.Address] = i
-		i += 1
 	}
+
+	metadata = append(metadata, utils.ZeroOneStringToByteArray(flags)...)
+	metadata = append(metadata, byte(len(accounts)))
 
 	for _, account := range accounts {
 		metadata = append(metadata, byte(addressMap[account.Address]))
+	}
+
+	itemsFlag := ""
+	for _, transaction := range transactions {
+		if transaction.Swap == nil {
+			itemsFlag = itemsFlag + "0"
+		} else {
+			itemsFlag = itemsFlag + "1"
+		}
+	}
+
+	metadata = append(metadata, utils.ZeroOneStringToByteArray(itemsFlag)...)
+
+	for _, transaction := range transactions {
+		if transaction.Swap == nil {
+			continue
+		} else {
+			metadata = append(metadata, byte(len(transaction.Swap.Accounts)))
+
+			command := utils.FromHex(transaction.Swap.Command)
+			metadata = append(metadata, utils.ToBigEndianBytes(uint16(len(command)))...)
+			metadata = append(metadata, command...)
+		}
 	}
 
 	return metadata

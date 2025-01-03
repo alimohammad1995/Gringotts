@@ -39,10 +39,10 @@ type EstimateResponse struct {
 }
 
 type Swap struct {
-	Executor    [32]byte `borsh:"executor"`
-	Command     []byte   `borsh:"command"`
-	Metadata    []byte   `borsh:"metadata"`
-	StableToken [32]byte `borsh:"stable_token"`
+	Executor      [32]byte `borsh:"executor"`
+	Command       []byte   `borsh:"command"`
+	AccountsCount uint8    `borsh:"accounts_count"`
+	StableToken   [32]byte `borsh:"stable_token"`
 }
 
 type BridgeInboundTransferItem struct {
@@ -57,19 +57,29 @@ type BridgeInboundTransfer struct {
 }
 
 type BridgeOutboundTransferItem struct {
-	Asset              [32]byte `borsh:"asset"`
-	Recipient          [32]byte `borsh:"recipient"`
-	ExecutionGasAmount uint64   `borsh:"execution_gas_amount"`
-	DistributionBP     uint16   `borsh:"distribution_bp"`
-	Swap               *Swap    `borsh:"swap"` // Pointer for Option<Swap>
+	DistributionBP uint16 `borsh:"distribution_bp"`
 }
 
 type BridgeOutboundTransfer struct {
-	ChainID uint8                        `borsh:"chain_id"`
-	Items   []BridgeOutboundTransferItem `borsh:"items"`
+	ChainID      uint8                        `borsh:"chain_id"`
+	ExecutionGas uint64                       `borsh:"execution_gas"`
+	Message      []byte                       `borsh:"message"`
+	Items        []BridgeOutboundTransferItem `borsh:"items"`
 }
 
 type BridgeRequest struct {
 	Inbound   BridgeInboundTransfer    `borsh:"inbound"`
 	Outbounds []BridgeOutboundTransfer `borsh:"outbounds"`
+}
+
+type SolanaTransferItem struct {
+	SwapAccountCount uint8  `borsh:"swap_account_count"`
+	SwapCommand      []byte `borsh:"swap_command"`
+}
+
+type SolanaTransfer struct {
+	AccountsAddress [][32]byte            `borsh:"accounts_address"`
+	AccountFlags    []byte                `borsh:"accounts_flags"`
+	AccountMapping  []byte                `borsh:"accounts_mapping"`
+	Items           []*SolanaTransferItem `borsh:"items"`
 }

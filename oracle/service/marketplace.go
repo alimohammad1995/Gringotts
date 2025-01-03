@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"math/big"
 	"strings"
 
 	"gringotts/blockchain"
@@ -161,22 +162,20 @@ func estimateMarketplaceEVM(
 
 	outbounds := make([]connection.GringottsEstimateOutboundTransfer, 0, len(dstItems))
 	for chainIter, assets := range dstItems {
-		items := make([]connection.GringottsEstimateOutboundTransferItem, 0, len(assets))
+		gas := int64(0)
+		totalMessageLength := uint16(0)
 
 		for _, asset := range assets {
 			executionGas, commendLength, metadataLength := GetExecutionParams(chainIter, asset)
 
-			items = append(items, connection.GringottsEstimateOutboundTransferItem{
-				Asset:          utils.ToByte32(asset),
-				ExecutionGas:   uint256.NewInt(executionGas).ToBig(),
-				CommandLength:  commendLength,
-				MetadataLength: metadataLength,
-			})
+			gas = gas + int64(executionGas)
+			totalMessageLength = totalMessageLength + commendLength + metadataLength
 		}
 
 		outbounds = append(outbounds, connection.GringottsEstimateOutboundTransfer{
-			ChainId: chainIter.GetId(),
-			Items:   items,
+			ChainId:       chainIter.GetId(),
+			MessageLength: totalMessageLength,
+			ExecutionGas:  big.NewInt(gas),
 		})
 	}
 

@@ -40,20 +40,22 @@ func Max(a int, b int) int {
 	return b
 }
 
-func ToLittleEndianBytes(number any) []byte {
+func ToBigEndianBytes(number any) []byte {
 	switch v := number.(type) {
 	case uint64:
 		bytes := make([]byte, 8)
-		binary.LittleEndian.PutUint64(bytes, v)
+		binary.BigEndian.PutUint64(bytes, v)
 		return bytes
 	case uint32:
 		bytes := make([]byte, 4)
-		binary.LittleEndian.PutUint32(bytes, v)
+		binary.BigEndian.PutUint32(bytes, v)
 		return bytes
 	case uint16:
 		bytes := make([]byte, 2)
-		binary.LittleEndian.PutUint16(bytes, v)
+		binary.BigEndian.PutUint16(bytes, v)
 		return bytes
+	case uint8:
+		return []byte{v}
 	default:
 		panic("Unsupported numeric type")
 	}

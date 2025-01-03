@@ -27,8 +27,12 @@ pub const LZ_RECEIVE_TYPES_SEED: &[u8] = b"LzReceiveTypes";
 pub mod gringotts {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, params: InitializeParams) -> Result<()> {
-        Initialize::apply(ctx, &params)
+    pub fn gringotts_initialize(ctx: Context<GringottsInitialize>, params: GringottsInitializeParams) -> Result<()> {
+        GringottsInitialize::apply(ctx, &params)
+    }
+
+    pub fn gringotts_update(ctx: Context<GringottsUpdate>, params: GringottsUpdateParams) -> Result<()> {
+        GringottsUpdate::apply(ctx, &params)
     }
 
     pub fn destroy(ctx: Context<Destroy>) -> Result<()> {

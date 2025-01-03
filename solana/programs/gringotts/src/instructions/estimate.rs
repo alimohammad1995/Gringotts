@@ -58,18 +58,10 @@ pub struct EstimateInboundTransfer {
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
-pub struct EstimateOutboundTransferItem {
-    pub asset: [u8; 32],
-    pub execution_gas: u64,
-    pub command_length: u16,
-    pub metadata_length: u16,
-}
-
-#[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct EstimateOutboundTransfer {
     pub chain_id: u8,
-    pub metadata_length: u16,
-    pub items: Vec<EstimateOutboundTransferItem>,
+    pub execution_gas: u64,
+    pub message_length: u16,
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]

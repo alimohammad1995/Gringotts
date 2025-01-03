@@ -1,13 +1,13 @@
 pub const CHAIN_TRANSFER_TYPE: u8 = 1;
 
 #[derive(Debug, Clone)]
-pub struct Message<'info> {
+pub struct Message<'a> {
     pub header: u8,
-    pub payload: &'info [u8],
+    pub payload: &'a [u8],
 }
 
-impl<'info> Message<'info> {
-    pub fn new(header: u8, payload: &'info [u8]) -> Message<'info> {
+impl<'a> Message<'a> {
+    pub fn new(header: u8, payload: &'a [u8]) -> Message<'a> {
         Message { header, payload }
     }
 
@@ -18,26 +18,20 @@ impl<'info> Message<'info> {
         encoded
     }
 
-    pub fn decode(data: &'info [u8]) -> Message {
+    pub fn decode(data: &'a [u8]) -> Message {
         Self::new(data[0], &data[1..])
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct ChainTransferItem<'info> {
+pub struct ChainTransferItem {
     pub amount_usdx: u64,
-    pub asset: &'info [u8; 32],
-    pub recipient: &'info [u8; 32],
-    pub executor: &'info [u8; 32],
-    pub stable_token: &'info [u8; 32],
-    pub command: &'info [u8],
-    pub metadata: &'info [u8],
 }
 
 #[derive(Debug, Clone)]
 pub struct ChainTransfer<'info> {
-    pub items: Vec<ChainTransferItem<'info>>,
-    pub metadata: &'info [u8],
+    pub items: Vec<ChainTransferItem>,
+    pub message: &'info [u8],
 }
 
 impl<'info> ChainTransfer<'info> {
@@ -49,28 +43,9 @@ impl<'info> ChainTransfer<'info> {
 
         for item in &self.items {
             encoded.extend_from_slice(&item.amount_usdx.to_be_bytes());
-
-            encoded.extend_from_slice(item.asset);
-            encoded.extend_from_slice(item.recipient);
-
-            let need_swap = if item.command.len() > 0 { 1u8 } else { 0u8 };
-            encoded.extend_from_slice(&need_swap.to_be_bytes());
-
-            if need_swap > 0 {
-                encoded.extend_from_slice(item.executor);
-                encoded.extend_from_slice(item.stable_token);
-
-                encoded.extend_from_slice(&(item.command.len() as u16).to_be_bytes());
-                encoded.extend_from_slice(&item.command);
-
-                encoded.extend_from_slice(&(item.metadata.len() as u16).to_be_bytes());
-                encoded.extend_from_slice(&item.metadata);
-            }
         }
 
-        encoded.extend_from_slice(&(self.metadata.len() as u16).to_be_bytes());
-        encoded.extend_from_slice(&self.metadata);
-
+        encoded.extend_from_slice(&self.message);
         encoded
     }
 
@@ -78,80 +53,95 @@ impl<'info> ChainTransfer<'info> {
         let mut offset = 0;
 
         // Read itemsCount (uint8, 1 byte)
-        let items_count_bytes = &data[offset..offset + 1];
+        let items_count = u8::from_be_bytes((&data[offset..offset + 1]).try_into().unwrap());
         offset += 1;
-        let items_count = u8::from_be_bytes(items_count_bytes.try_into().unwrap());
 
-        let mut items = Vec::new();
+        let mut items = Vec::with_capacity(items_count as usize);
 
         for _ in 0..items_count {
             // Read amountUSDX (uint64, 8 bytes)
             let amount_usdx = u64::from_be_bytes((&data[offset..offset + 8]).try_into().unwrap());
             offset += 8;
 
-            // Read asset (32 bytes)
-            let asset = &data[offset..offset + 32];
-            offset += 32;
-
-            // Read recipient (32 bytes)
-            let recipient = &data[offset..offset + 32];
-            offset += 32;
-
-            // Read needSwap (uint8, 1 byte)
-            let need_swap = &data[offset..offset + 1];
-            offset += 1;
-
-            let item: ChainTransferItem;
-
-            if need_swap[0] > 0 {
-                // Read executor (32 bytes)
-                let executor = &data[offset..offset + 32];
-                offset += 32;
-
-                // Read stableToken (32 bytes)
-                let stable_token = &data[offset..offset + 32];
-                offset += 32;
-
-                // Read command (uint16, 2 bytes)
-                let command_length = u16::from_be_bytes((&data[offset..offset + 2]).try_into().unwrap()) as usize;
-                offset += 2;
-                let command = &data[offset..offset + command_length];
-                offset += command_length;
-
-                // Read metadata (uint16, 2 bytes)
-                let metadata_length = u16::from_be_bytes((&data[offset..offset + 2]).try_into().unwrap()) as usize;
-                offset += 2;
-                let metadata = &data[offset..offset + metadata_length];
-                offset += metadata_length;
-
-                item = ChainTransferItem {
-                    amount_usdx,
-                    asset: asset.try_into().unwrap(),
-                    recipient: recipient.try_into().unwrap(),
-                    executor: executor.try_into().unwrap(),
-                    stable_token: stable_token.try_into().unwrap(),
-                    command,
-                    metadata,
-                };
-            } else {
-                item = ChainTransferItem {
-                    amount_usdx,
-                    asset: asset.try_into().unwrap(),
-                    recipient: recipient.try_into().unwrap(),
-                    executor: &[0u8; 32],
-                    stable_token: &[0u8; 32],
-                    command: &[],
-                    metadata: &[],
-                };
-            }
-
-            items.push(item);
+            items.push(ChainTransferItem {
+                amount_usdx
+            });
         }
 
-        let metadata_length = u16::from_be_bytes((&data[offset..offset + 2]).try_into().unwrap()) as usize;
+        let message_length = u16::from_be_bytes((&data[offset..offset + 2]).try_into().unwrap()) as usize;
         offset += 2;
-        let metadata = data[offset..offset + metadata_length].as_ref();
+        let message = &data[offset..offset + message_length];
 
-        ChainTransfer { items, metadata }
+        ChainTransfer { items, message }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SolanaTransferItem<'info> {
+    pub swap_account_count: usize,
+    pub swap_command: &'info [u8],
+}
+
+#[derive(Debug, Clone)]
+pub struct SolanaTransfer<'info> {
+    pub accounts_address: Vec<&'info [u8; 32]>,
+    pub accounts_flags: &'info [u8],
+    pub accounts_mapping: &'info [u8],
+    pub items: Vec<Option<SolanaTransferItem<'info>>>,
+}
+
+impl<'info> SolanaTransfer<'info> {
+    pub fn decode(data: &'info [u8], chain_transfer_count: usize) -> SolanaTransfer<'info> {
+        let mut offset = 0;
+
+        // Read accounts_count (uint8, 1 byte)
+        let accounts_count = u8::from_be_bytes((&data[offset..offset + 1]).try_into().unwrap());
+        offset += 1;
+
+        let mut accounts = Vec::<&[u8; 32]>::with_capacity(accounts_count as usize);
+        for _ in 0..accounts_count {
+            let slice = &data[offset..offset + 32];
+            accounts.push(slice.try_into().unwrap());
+            offset += 32;
+        }
+
+        let account_flags_count = ((accounts_count + 7) / 8) as usize;
+        let accounts_flags = &data[offset..offset + account_flags_count];
+        offset += account_flags_count;
+
+        let mapping_counts = u8::from_be_bytes((&data[offset..offset + 1]).try_into().unwrap()) as usize;
+        offset += 1;
+        let accounts_mapping = &data[offset..offset + mapping_counts];
+        offset += mapping_counts;
+
+        let mut items = Vec::with_capacity(chain_transfer_count);
+        let items_flags = data[offset..offset + 1][0];
+        offset += 1;
+
+        let message = &data[offset..];
+        let mut message_offset = 0;
+
+        for i in 0..chain_transfer_count {
+            if items_flags & (1 << (7 - i)) == 0 {
+                items.push(None)
+            } else {
+                let swap_account_counts = u8::from_be_bytes((&message[message_offset..message_offset + 1]).try_into().unwrap()) as usize;
+                message_offset += 1;
+
+                let command_length = u16::from_be_bytes((&message[message_offset..message_offset + 2]).try_into().unwrap()) as usize;
+                message_offset += 2;
+
+                let command = &message[message_offset..message_offset + command_length];
+                message_offset += command_length;
+                items.push(Some(SolanaTransferItem { swap_command: command, swap_account_count: swap_account_counts }));
+            }
+        }
+
+        SolanaTransfer {
+            accounts_address: accounts,
+            accounts_flags: accounts_flags,
+            accounts_mapping: accounts_mapping,
+            items: items,
+        }
     }
 }

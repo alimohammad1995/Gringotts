@@ -17,7 +17,7 @@ gringotts = "Up3RApFZC654LGNSjKtEgVVdsfW7XANLaYFjP81vShM"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Mainnet"
+cluster = "Devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

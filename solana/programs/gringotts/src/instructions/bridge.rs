@@ -10,7 +10,7 @@ use anchor_lang::solana_program::program::invoke_signed;
 use anchor_lang::{system_program, Accounts, AnchorDeserialize, AnchorSerialize};
 use anchor_spl::associated_token;
 use anchor_spl::associated_token::AssociatedToken;
-use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
+use anchor_spl::token::{self, Mint, Token, TokenAccount};
 use oapp::endpoint::instructions::SendParams;
 use pyth_solana_receiver_sdk::price_update::PriceUpdateV2;
 
@@ -27,21 +27,17 @@ pub struct Bridge<'info> {
     #[account(mut, seeds = [VAULT_SEED], bump)]
     pub vault: SystemAccount<'info>,
 
-    #[account(seeds = [PEER_SEED, &self_peer.lz_eid.to_le_bytes()], bump = self_peer.bump)]
+    #[account(seeds = [PEER_SEED, &gringotts.lz_eid.to_be_bytes()], bump = self_peer.bump)]
     pub self_peer: Account<'info, Peer>,
 
-    #[account(
-        init_if_needed,
-        payer = user,
-        associated_token::mint = stable_coin_mint,
-        associated_token::authority = gringotts,
-    )]
-    pub gringotts_stable_coin: Account<'info, TokenAccount>,
     pub stable_coin_mint: Account<'info, Mint>,
+    #[account(associated_token::mint = stable_coin_mint, associated_token::authority = gringotts)]
+    pub gringotts_stable_coin: Account<'info, TokenAccount>,
 
     /// CHECK: This is the swap program
     #[account(executable)]
     pub swap_program: AccountInfo<'info>,
+
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -71,41 +67,39 @@ impl<'info> Bridge<'info> {
 
         let remaining_accounts = ctx.remaining_accounts;
         let mut r = 0;
-        let mut m = 0;
 
-        let mut net_usdx = 0u64;
-
-        require!(
-            self_peer.chain_id == gringotts.chain_id,
-            BridgeErrorCode::InvalidParams
-        );
+        require!(self_peer.chain_id == gringotts.chain_id, BridgeErrorCode::InvalidParams);
 
         /*********** [Inbound transaction] ***********/
+        let first_stable_coin_amount = gringotts_stable_coin.amount;
+
         for i in 0..params.inbound.items.len() {
             let item = &params.inbound.items[i];
-            let first_stable_coin_amount = gringotts_stable_coin.amount;
 
             if self_peer.stable_coins.contains(&item.asset) && stable_coin_mint.key().to_bytes() == item.asset {
                 let user_token_account = &remaining_accounts[r];
-
-                let cpi_accounts = Transfer {
-                    from: user_token_account.to_account_info(),
-                    to: gringotts_stable_coin.to_account_info(),
-                    authority: signer.to_account_info(),
-                };
-
-                let cpi_ctx = CpiContext::new(token_program.to_account_info(), cpi_accounts);
-                token::transfer(cpi_ctx, item.amount)?;
-
                 r += 1;
+
+                token::transfer(
+                    CpiContext::new(
+                        token_program.to_account_info(),
+                        token::Transfer {
+                            from: user_token_account.to_account_info(),
+                            to: gringotts_stable_coin.to_account_info(),
+                            authority: signer.to_account_info(),
+                        },
+                    ),
+                    item.amount,
+                )?;
             } else {
-                require!(!item.swap.is_none(), BridgeErrorCode::InvalidParams);
+                require!(item.swap.is_none() == false, BridgeErrorCode::InvalidParams);
 
                 let token_mint: &Account<Mint> = &Account::try_from(&remaining_accounts[r])?;
-                let token_account = &remaining_accounts[r + 1];
+                let _gringotts_token = &remaining_accounts[r + 1];
+                r += 2;
 
                 init_token_account_if_needed(
-                    token_account,
+                    _gringotts_token,
                     &gringotts.to_account_info(),
                     token_mint,
                     signer,
@@ -114,10 +108,7 @@ impl<'info> Bridge<'info> {
                     associated_token_program,
                 )?;
 
-                let mut gringotts_token: Account<TokenAccount> = Account::try_from(token_account)?;
-
-                require!(gringotts_token.owner.key() == gringotts.key(), BridgeErrorCode::InvalidParams);
-                require!(gringotts_token.mint.key() == token_mint.key(), BridgeErrorCode::InvalidParams);
+                let gringotts_token = Account::<TokenAccount>::try_from(_gringotts_token)?;
 
                 if item.asset == [0; 32] {
                     let seeds = &[GRINGOTTS_SEED, &[gringotts.bump]];
@@ -134,37 +125,34 @@ impl<'info> Bridge<'info> {
                         item.amount,
                     )?;
 
-                    token::sync_native(CpiContext::new_with_signer(
-                        gringotts_token.to_account_info(),
-                        token::SyncNative {
-                            account: gringotts_token.to_account_info(),
-                        },
-                        signer_seeds,
-                    ))?;
-
-                    r += 2;
+                    token::sync_native(
+                        CpiContext::new_with_signer(
+                            gringotts_token.to_account_info(),
+                            token::SyncNative {
+                                account: gringotts_token.to_account_info(),
+                            },
+                            signer_seeds,
+                        )
+                    )?;
                 } else {
                     let user_token_account = &remaining_accounts[r + 2];
+                    r += 1;
 
-                    let cpi_ctx = CpiContext::new(
-                        token_program.to_account_info(),
-                        Transfer {
-                            from: user_token_account.to_account_info(),
-                            to: gringotts_token.to_account_info(),
-                            authority: signer.to_account_info(),
-                        },
-                    );
-
-                    token::transfer(cpi_ctx, item.amount)?;
-
-                    r += 3;
+                    token::transfer(
+                        CpiContext::new(
+                            token_program.to_account_info(),
+                            token::Transfer {
+                                from: user_token_account.to_account_info(),
+                                to: gringotts_token.to_account_info(),
+                                authority: signer.to_account_info(),
+                            },
+                        ),
+                        item.amount,
+                    )?;
                 }
 
                 let swap = item.swap.as_ref().unwrap();
-                let swap_account_counts = swap.metadata[m] as usize;
-                m += 1;
-
-                let before_swap_amount = gringotts_token.amount;
+                let swap_account_counts = swap.accounts_count as usize;
 
                 swap_on_jupiter(
                     gringotts,
@@ -173,24 +161,17 @@ impl<'info> Bridge<'info> {
                     swap.command.clone(),
                 )?;
 
-                gringotts_token.reload()?;
-
-                require!(
-                    gringotts_token.amount - before_swap_amount >= item.amount,
-                    BridgeErrorCode::InvalidSwapAmount
-                );
-
                 r += swap_account_counts;
             }
-
-            gringotts_stable_coin.reload()?;
-
-            net_usdx += change_decimals(
-                gringotts_stable_coin.amount - first_stable_coin_amount,
-                stable_coin_mint.decimals,
-                CHAIN_TRANSFER_DECIMALS,
-            );
         }
+
+        gringotts_stable_coin.reload()?;
+
+        let mut net_usdx = change_decimals(
+            gringotts_stable_coin.amount - first_stable_coin_amount,
+            stable_coin_mint.decimals,
+            CHAIN_TRANSFER_DECIMALS,
+        );
 
         require!(net_usdx >= params.inbound.amount_usdx, BridgeErrorCode::InvalidSwapAmount);
 
@@ -199,39 +180,19 @@ impl<'info> Bridge<'info> {
         let mut peers = Vec::with_capacity(params.outbounds.len());
 
         for i in 0..params.outbounds.len() {
-            let mut items = Vec::with_capacity(params.outbounds[i].items.len());
-
-            for j in 0..params.outbounds[i].items.len() {
-                let mut command_length = 0;
-                let mut metadata_length = 0;
-
-                if let Some(swap) = params.outbounds[i].items[j].swap.as_ref() {
-                    command_length = swap.command.len() as u16;
-                    metadata_length = swap.metadata.len() as u16;
-                }
-
-                let item = EstimateOutboundTransferItem {
-                    asset: params.outbounds[i].items[j].asset,
-                    execution_gas: params.outbounds[i].items[j].execution_gas,
-                    command_length: command_length,
-                    metadata_length: metadata_length,
-                };
-
-                items.push(item);
-            }
-
             estimate_outbounds.push(EstimateOutboundTransfer {
                 chain_id: params.outbounds[i].chain_id,
-                items: items,
-                metadata_length: params.outbounds[i].metadata.len() as u16,
+                execution_gas: params.outbounds[i].execution_gas,
+                message_length: params.outbounds[i].message.len() as u16,
             });
 
+            // TODO: change this to be account info!
             let mut data = &remaining_accounts[r + i].try_borrow_data()?[..];
             let peer = Peer::try_deserialize(&mut data)?;
             peers.push(peer);
         }
 
-        r = r + params.outbounds.len();
+        r += params.outbounds.len();
 
         let estimate_request = &EstimateRequest {
             inbound: EstimateInboundTransfer {
@@ -249,8 +210,8 @@ impl<'info> Bridge<'info> {
             true,
         )?;
 
-        net_usdx = net_usdx - estimate_result.transfer_gas_usdx;
-        net_usdx = net_usdx - estimate_result.commission_usdx;
+        net_usdx = net_usdx - (estimate_result.transfer_gas_usdx + estimate_result.commission_usdx);
+        net_usdx = net_usdx + (estimate_result.transfer_gas_discount_usdx + estimate_result.commission_discount_usdx);
 
         /*********** [Send transfers] ***********/
         let mut message_ids = Vec::with_capacity(params.outbounds.len());
@@ -261,44 +222,20 @@ impl<'info> Bridge<'info> {
             let mut chain_transfers = Vec::with_capacity(params.outbounds[i].items.len());
 
             for j in 0..params.outbounds[i].items.len() {
-                let amount_usdx = bps(
-                    net_usdx,
-                    params.outbounds[i].items[j].distribution_bp as u32,
-                );
+                let amount_usdx = bps(net_usdx, params.outbounds[i].items[j].distribution_bp as u32);
 
-                if let Some(swap) = params.outbounds[i].items[j].swap.as_ref() {
-                    chain_transfers.push(ChainTransferItem {
-                        amount_usdx: amount_usdx,
-                        asset: &params.outbounds[i].items[j].asset,
-                        recipient: &params.outbounds[i].items[j].recipient,
-                        executor: &swap.executor,
-                        stable_token: &swap.stable_token,
-                        command: swap.command.as_slice(),
-                        metadata: swap.metadata.as_slice(),
-                    });
-                } else {
-                    chain_transfers.push(ChainTransferItem {
-                        amount_usdx: amount_usdx,
-                        asset: &params.outbounds[i].items[j].asset,
-                        recipient: &params.outbounds[i].items[j].recipient,
-                        executor: &[0; 32],
-                        stable_token: &[0; 32],
-                        command: &[],
-                        metadata: &[],
-                    });
-                }
+                chain_transfers.push(ChainTransferItem {
+                    amount_usdx: amount_usdx,
+                });
             }
 
             let chain_transfer = ChainTransfer {
                 items: chain_transfers,
-                metadata: params.outbounds[i].metadata.as_slice(),
+                message: params.outbounds[i].message.as_slice(),
             };
 
             let mut builder = OptionsBuilder::new();
-            builder.add_executor_lz_receive_option(
-                estimate_result.outbound_details[i].execution_gas,
-                0,
-            );
+            builder.add_executor_lz_receive_option(estimate_result.outbound_details[i].execution_gas, 0);
 
             let encoded_chain_transfer = chain_transfer.encode();
             let message = Message::new(CHAIN_TRANSFER_TYPE, encoded_chain_transfer.as_slice());
@@ -389,10 +326,7 @@ fn init_token_account_if_needed<'info>(
 ) -> Result<()> {
     let ata = associated_token::get_associated_token_address(&authority.key(), &token_mint.key());
 
-    require!(
-        ata.key() == token_account.key(),
-        BridgeErrorCode::InvalidParams
-    );
+    require!(ata.key() == token_account.key(), BridgeErrorCode::InvalidParams);
 
     if token_account.data_is_empty() {
         let cpi_accounts = associated_token::Create {
@@ -415,7 +349,7 @@ fn init_token_account_if_needed<'info>(
 pub struct Swap {
     executor: [u8; 32],
     command: Vec<u8>,
-    metadata: Vec<u8>,
+    accounts_count: u8,
     stable_token: [u8; 32],
 }
 
@@ -434,17 +368,14 @@ pub struct BridgeInboundTransfer {
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct BridgeOutboundTransferItem {
-    pub asset: [u8; 32],
-    pub recipient: [u8; 32],
-    pub execution_gas: u64,
     pub distribution_bp: u16,
-    pub swap: Option<Swap>,
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct BridgeOutboundTransfer {
     pub chain_id: u8,
-    pub metadata: Vec<u8>,
+    pub execution_gas: u64,
+    pub message: Vec<u8>,
     pub items: Vec<BridgeOutboundTransferItem>,
 }
 

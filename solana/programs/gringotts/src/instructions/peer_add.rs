@@ -8,7 +8,7 @@ pub struct PeerAdd<'info> {
         init,
         payer = owner,
         space = 8 + Peer::INIT_SPACE,
-        seeds = [PEER_SEED, &params.lz_eid.to_le_bytes()],
+        seeds = [PEER_SEED, &params.lz_eid.to_be_bytes()],
         bump,
     )]
     pub peer: Account<'info, Peer>,

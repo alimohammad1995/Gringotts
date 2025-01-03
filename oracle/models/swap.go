@@ -4,12 +4,9 @@ import (
 	"github.com/holiman/uint256"
 )
 
-type Side int
-
 type Swap struct {
 	Executor      string    `json:"executor"`
 	Command       string    `json:"command"`
-	MetaData      string    `json:"metadata"`
 	Accounts      []Account `json:"accounts"`
 	AddressLookup []string  `json:"addressLookup"`
 }

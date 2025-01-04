@@ -21,7 +21,7 @@ const SOL_EID = 30168;
 const ARB_CHAIN_ID = 1;
 const SOL_CHAIN_ID = 2;
 
-const ARB_ADDRESS = "0x7794d4260bf7c0c975dd0df59c4f67c1631eea51";
+const ARB_ADDRESS = "0xcc9462adf0a45db3e9ab95b52829e638f886e1b3";
 
 const ARB_USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
 const SOL_USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -29,6 +29,7 @@ const SOL_USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 const program = anchor.workspace.Gringotts as Program<Gringotts>;
 const wallet = provider.wallet as NodeWallet;
 
+export const VAULT_SEED = 'Vault'
 export const GRINGOTTS_SEED = 'Gringotts'
 export const PEER_SEED = 'Peer'
 export const LZ_RECEIVE_TYPES_SEED = 'LzReceiveTypes'
@@ -41,6 +42,12 @@ const [gringottsPDA] = PublicKey.findProgramAddressSync(
     [Buffer.from(GRINGOTTS_SEED)],
     program.programId
 );
+
+const [vaultPDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from(VAULT_SEED)],
+    program.programId
+);
+
 
 async function init() {
     const [lzReceiveTypesPDA] = PublicKey.findProgramAddressSync(
@@ -68,15 +75,17 @@ async function init() {
     registerOAppAccounts[2].isSigner = false
 
     const tx = await program.methods
-        .initialize({
+        .gringottsInitialize({
             chainId: SOL_CHAIN_ID,
             lzEid: SOL_EID,
+            vaultFund: new BN(10 * 1000 * 1000),
             lzEndpointProgram: endpointProgram.program,
             pythPriceFeedId: '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
             commissionMicroBps: 5000,
         })
         .accounts({
             gringotts: gringottsPDA,
+            vault: vaultPDA,
             lzReceiveTypesPDA: lzReceiveTypesPDA,
             owner: wallet.publicKey,
             systemProgram: SystemProgram.programId,
@@ -88,6 +97,7 @@ async function init() {
 
     console.log(
         "Gringotts PDA", gringottsPDA.toBase58(),
+        "Vault PDA", vaultPDA.toBase58(),
         "Value", JSON.stringify(await program.account.gringotts.fetch(gringottsPDA))
     );
 }
@@ -98,7 +108,7 @@ async function addPeer(
     remotePeer: Uint8Array,
 ) {
     const [chainPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from(PEER_SEED), new BN(remote).toArrayLike(Buffer, 'le', 4)],
+        [Buffer.from(PEER_SEED), new BN(remote).toArrayLike(Buffer, 'be', 4)],
         program.programId
     );
 
@@ -194,6 +204,7 @@ async function main() {
     const peer = utils.arrayify(utils.hexZeroPad(ARB_ADDRESS, 32));
 
     console.log("Gringotts PDA", gringottsPDA.toBase58());
+    console.log("Vault PDA", vaultPDA.toBase58());
 
     // await init();
     // await addPeer(ARB_CHAIN_ID, chainID, peer); // ARB

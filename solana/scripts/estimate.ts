@@ -61,14 +61,8 @@ async function estimate(chainID: number) {
                 outbounds: [
                     {
                         chainId: 1,
-                        items: [
-                            {
-                                asset: zeroArray,
-                                executionGasAmount: new BN(100000),
-                                executionCommandLength: 1000,
-                                executionMetadataLength: 0,
-                            }
-                        ],
+                        executionGas: new BN(1000000),
+                        messageLength: 4000,
                     }
                 ],
             }).accounts({

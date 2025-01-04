@@ -25,6 +25,7 @@ const SOL_EID = 40168;
 const program = anchor.workspace.Gringotts as Program<Gringotts>;
 const wallet = provider.wallet as NodeWallet;
 
+export const VAULT_SEED = 'Vault'
 export const GRINGOTTS_SEED = 'Gringotts'
 export const PEER_SEED = 'Peer'
 export const LZ_RECEIVE_TYPES_SEED = 'LzReceiveTypes'
@@ -38,10 +39,12 @@ const [gringottsPDA] = PublicKey.findProgramAddressSync(
     program.programId
 );
 
+const [vaultPDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from(VAULT_SEED)],
+    program.programId
+);
+
 async function init() {
-    const [gringottsPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from(GRINGOTTS_SEED)], program.programId
-    );
     const [lzReceiveTypesPDA] = PublicKey.findProgramAddressSync(
         [Buffer.from(LZ_RECEIVE_TYPES_SEED), gringottsPDA.toBytes()], program.programId
     );
@@ -67,15 +70,17 @@ async function init() {
     registerOAppAccounts[2].isSigner = false
 
     const tx = await program.methods
-        .initialize({
+        .gringottsInitialize({
             chainId: 2,
             lzEid: SOL_EID,
+            vaultFund: new BN(10 * 1000 * 1000),
             lzEndpointProgram: endpointProgram.program,
             pythPriceFeedId: '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
             commissionMicroBps: 5000,
         })
         .accounts({
             gringotts: gringottsPDA,
+            vault: vaultPDA,
             lzReceiveTypesPDA: lzReceiveTypesPDA,
             owner: wallet.publicKey,
             systemProgram: SystemProgram.programId,
@@ -87,7 +92,8 @@ async function init() {
 
     console.log(
         "Gringotts PDA", gringottsPDA.toBase58(),
-        "Value", JSON.stringify(await program.account.gringotts.fetch(gringottsPDA))
+        "Vault PDA", vaultPDA.toBase58(),
+        "\nValue", JSON.stringify(await program.account.gringotts.fetch(gringottsPDA))
     );
 }
 
@@ -97,7 +103,7 @@ async function addPeer(
     remotePeer: Uint8Array,
 ) {
     const [chainPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from(PEER_SEED), new BN(remote).toArrayLike(Buffer, 'le', 4)],
+        [Buffer.from(PEER_SEED), new BN(remote).toArrayLike(Buffer, 'be', 4)],
         program.programId
     );
 

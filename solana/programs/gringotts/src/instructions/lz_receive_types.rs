@@ -49,22 +49,22 @@ impl LzReceiveTypes<'_> {
                 is_writable: false,
             },
             LzAccount {
-                pubkey: vault.key(),
+                pubkey: vault,
                 is_signer: false,
                 is_writable: true,
             },
             LzAccount {
-                pubkey: AssociatedToken::id().key(),
+                pubkey: AssociatedToken::id(),
                 is_signer: false,
                 is_writable: false,
             },
             LzAccount {
-                pubkey: Token::id().key(),
+                pubkey: Token::id(),
                 is_signer: false,
                 is_writable: false,
             },
             LzAccount {
-                pubkey: System::id().key(),
+                pubkey: System::id(),
                 is_signer: false,
                 is_writable: false,
             },

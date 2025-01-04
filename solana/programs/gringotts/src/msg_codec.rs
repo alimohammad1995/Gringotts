@@ -68,9 +68,7 @@ impl<'info> ChainTransfer<'info> {
             });
         }
 
-        let message_length = u16::from_be_bytes((&data[offset..offset + 2]).try_into().unwrap()) as usize;
-        offset += 2;
-        let message = &data[offset..offset + message_length];
+        let message = &data[offset..];
 
         ChainTransfer { items, message }
     }

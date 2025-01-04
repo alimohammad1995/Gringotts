@@ -41,17 +41,16 @@ impl<'info> LzReceive<'info> {
         let self_peer = &ctx.accounts.self_peer;
         let peer = &ctx.accounts.peer;
 
-        let remaining_accounts: &Vec<AccountInfo<'info>> = &ctx.remaining_accounts
-            .iter()
-            .map(|account| account.to_account_info())
-            .chain([
+        let remaining_accounts: &Vec<AccountInfo<'info>> = &[
+            vec![
                 ctx.accounts.gringotts.to_account_info(),
                 ctx.accounts.vault.to_account_info(),
                 ctx.accounts.associated_token_program.to_account_info(),
                 ctx.accounts.token_program.to_account_info(),
                 ctx.accounts.system_program.to_account_info(),
-            ])
-            .collect();
+            ],
+            ctx.remaining_accounts.to_vec(),
+        ].concat();
 
         let mut r = 0;
 
@@ -70,7 +69,7 @@ impl<'info> LzReceive<'info> {
             let token_program = &ctx.accounts.token_program.to_account_info();
             let associated_token_program = &ctx.accounts.associated_token_program.to_account_info();
 
-            for i in 0..solana_transfer.accounts_address.len() {
+            for i in 0..chain_transfer.items.len() {
                 let chain_item = &chain_transfer.items[i];
 
                 let recipient = get_account(remaining_accounts, r, mappings);

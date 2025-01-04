@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	solana "github.com/blocto/solana-go-sdk/common"
 	"github.com/blocto/solana-go-sdk/types"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -226,6 +227,8 @@ func createEVMTransaction(
 			Items:        transactionItems,
 			ExecutionGas: big.NewInt(totalGas),
 		})
+
+		//fmt.Println("Message -> ", utils.ToHex(getMessage(chain, transactions)))
 	}
 
 	request := connection.GringottsBridgeRequest{
@@ -361,7 +364,10 @@ func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []
 		} else {
 			flags = flags + "0"
 		}
+
+		fmt.Println(account.Address)
 	}
+	fmt.Println(len(accountsMap))
 
 	metadata = append(metadata, utils.ZeroOneStringToByteArray(flags)...)
 	metadata = append(metadata, byte(len(accounts)))

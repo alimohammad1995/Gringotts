@@ -5,19 +5,19 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-gringotts = "BFKTaMXC9GiM2nydmYfNLTaxr2WTzANQH888G3dYbW6W"
+gringotts = "GhQn4LrN3RvdfHLQqB3DJbxk6aSgQvm3VRBMbTqGuzUk"
 
 [programs.localnet]
-gringotts = "BFKTaMXC9GiM2nydmYfNLTaxr2WTzANQH888G3dYbW6W"
+gringotts = "GhQn4LrN3RvdfHLQqB3DJbxk6aSgQvm3VRBMbTqGuzUk"
 
 [programs.mainnet]
-gringotts = "Up3RApFZC654LGNSjKtEgVVdsfW7XANLaYFjP81vShM"
+gringotts = "GhQn4LrN3RvdfHLQqB3DJbxk6aSgQvm3VRBMbTqGuzUk"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Devnet"
+cluster = "mainnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

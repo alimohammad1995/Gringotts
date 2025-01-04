@@ -2,6 +2,7 @@ package provider
 
 import (
 	"encoding/base64"
+	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/holiman/uint256"
 	"gringotts/models"
@@ -9,7 +10,7 @@ import (
 	"strconv"
 )
 
-const MaxAccounts = 10
+const MaxAccounts = 8
 
 type Jupiter struct {
 }
@@ -40,6 +41,7 @@ func (o *Jupiter) GetSwap(params *SwapParams) (*Swap, error) {
 	}
 
 	accounts, metadata := o.createMeta(params.Chain, swapAccounts)
+	fmt.Println(outAmount)
 
 	return &Swap{
 		ExecutorAddress: JupiterAddress,

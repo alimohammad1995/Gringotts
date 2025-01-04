@@ -10,7 +10,7 @@ use instructions::*;
 
 use oapp::{endpoint_cpi::LzAccount, LzReceiveParams};
 
-declare_id!("Up3RApFZC654LGNSjKtEgVVdsfW7XANLaYFjP81vShM");
+declare_id!("GhQn4LrN3RvdfHLQqB3DJbxk6aSgQvm3VRBMbTqGuzUk");
 
 pub const MAX_TRANSFERS: u8 = 4;
 pub const MAX_PRICE_AGE: u64 = 5 * 60;

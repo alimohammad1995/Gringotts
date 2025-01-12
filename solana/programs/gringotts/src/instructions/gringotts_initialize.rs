@@ -1,3 +1,4 @@
+use crate::constants::MAX_QUEUE_SIZE;
 use crate::{
     state::{Gringotts, LzReceiveTypesAccounts},
     GRINGOTTS_SEED, LZ_RECEIVE_TYPES_SEED, VAULT_SEED,
@@ -50,8 +51,10 @@ impl GringottsInitialize<'_> {
         gringotts.lz_endpoint_program = params.lz_endpoint_program;
         gringotts.pyth_price_feed_id = get_feed_id_from_hex(&params.pyth_price_feed_id)?;
         gringotts.commission_micro_bps = params.commission_micro_bps;
+        gringotts.stable_coins = params.stable_coins.clone();
 
         lz_receive_types_accounts.gringotts = gringotts.key();
+        lz_receive_types_accounts.orders = [Pubkey::default(); MAX_QUEUE_SIZE];
 
         system_program::transfer(
             CpiContext::new(
@@ -86,4 +89,5 @@ pub struct GringottsInitializeParams {
     pub pyth_price_feed_id: String,
     pub vault_fund: u64,
     pub commission_micro_bps: u32,
+    pub stable_coins: Vec<[u8; 32]>,
 }

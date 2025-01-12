@@ -13,8 +13,7 @@ import {
 } from '@layerzerolabs/lz-solana-sdk-v2'
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
 
-const ARB_ADDRESS = "0x1c191f62728b1498d779559e9ffb75a849582103";
-const TEST_STABLE = "0x301b022b40d06088fc974e767149f4a3feebbf1a";
+const ARB_ADDRESS = "0x0b481d55839b6118a917e89dd53eb35e5359fae9";
 
 const provider = anchor.AnchorProvider.env();
 anchor.setProvider(anchor.AnchorProvider.env());
@@ -27,6 +26,7 @@ const wallet = provider.wallet as NodeWallet;
 
 export const VAULT_SEED = 'Vault'
 export const GRINGOTTS_SEED = 'Gringotts'
+export const FULFILMENT_SEED = 'FulfilmentItem'
 export const PEER_SEED = 'Peer'
 export const LZ_RECEIVE_TYPES_SEED = 'LzReceiveTypes'
 
@@ -74,6 +74,7 @@ async function init() {
             chainId: 2,
             lzEid: SOL_EID,
             vaultFund: new BN(10 * 1000 * 1000),
+            stableCoins: [Array.from({length: 32}, (_) => 0)],
             lzEndpointProgram: endpointProgram.program,
             pythPriceFeedId: '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
             commissionMicroBps: 5000,
@@ -82,7 +83,6 @@ async function init() {
             gringotts: gringottsPDA,
             vault: vaultPDA,
             lzReceiveTypesPDA: lzReceiveTypesPDA,
-            owner: wallet.publicKey,
             systemProgram: SystemProgram.programId,
         })
         .remainingAccounts(registerOAppAccounts)
@@ -93,7 +93,7 @@ async function init() {
     console.log(
         "Gringotts PDA", gringottsPDA.toBase58(),
         "Vault PDA", vaultPDA.toBase58(),
-        "\nValue", JSON.stringify(await program.account.gringotts.fetch(gringottsPDA))
+        "Value", JSON.stringify(await program.account.gringotts.fetch(gringottsPDA))
     );
 }
 
@@ -107,19 +107,11 @@ async function addPeer(
         program.programId
     );
 
-    const zeroArray = Array.from({length: 32}, (_) => 0);
-    const oneArray = Array.from({length: 32}, (_) => 1);
-
     const tx = await program.methods
         .peerAdd({
             chainId: chain_id,
             lzEid: remote,
-            stableCoins: [
-                zeroArray,
-                oneArray,
-                Array.from(utils.arrayify(new PublicKey("4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU").toBytes())),
-                Array.from(utils.arrayify(utils.hexZeroPad(TEST_STABLE, 32))),
-            ],
+            multiSend: false,
             baseGasEstimate: new BN(50000),
             address: Array.from(remotePeer),
         })
@@ -189,19 +181,54 @@ async function setOappExecutor(remote: number) {
     console.log("tx", tx);
 }
 
+async function test() {
+    const [fcPDA, fcBump] = PublicKey.findProgramAddressSync(
+        [Buffer.from(FULFILMENT_SEED), Buffer.from(Array.from({length: 32}, (_) => 0))],
+        program.programId
+    );
+
+    console.log("fcPDA", fcPDA.toBase58(), fcBump);
+    console.log("vault", vaultPDA.toBase58());
+    console.log("gringotts", gringottsPDA.toBase58());
+
+    // const tx = await program.methods.test({
+    //     close: false,
+    //     fcBump: fcBump,
+    // })
+    //     .accounts({
+    //         gringotts: gringottsPDA,
+    //         vault: vaultPDA,
+    //         fcItem: fcPDA,
+    //         systemProgram: SystemProgram.programId,
+    //     }).rpc();
+
+    // console.log("tx", tx);
+
+    const [lzReceiveType, _] = PublicKey.findProgramAddressSync(
+        [Buffer.from('LzReceiveTypes'), Buffer.from(gringottsPDA.toBytes())],
+        program.programId
+    );
+
+    console.log(
+        "lzReceiveType", JSON.stringify(await program.account.lzReceiveTypesAccounts.fetch(lzReceiveType))
+    );
+
+    console.log();
+
+}
 
 async function main() {
     const chainID = ARB_EID;
     const peer = utils.arrayify(utils.hexZeroPad(ARB_ADDRESS, 32));
 
-    await init();
-    await addPeer(1, chainID, peer); // ARB
-    await addPeer(2, SOL_EID, utils.arrayify(program.programId.toBytes())); // SOL
-    await handleSend(chainID);
-    await handleReceive(chainID);
-    await handleNonce(chainID, peer);
-    await initUlnConfig(chainID);
-    await setOappExecutor(chainID);
+    // await init();
+    // await addPeer(1, chainID, peer); // ARB
+    // await handleSend(chainID);
+    // await handleReceive(chainID);
+    // await handleNonce(chainID, peer);
+    // await initUlnConfig(chainID);
+    // await setOappExecutor(chainID);
+    await test();
 }
 
 async function sendAndConfirm(

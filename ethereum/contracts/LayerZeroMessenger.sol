@@ -20,7 +20,7 @@ abstract contract LayerZeroBridge is OApp {
         bytes memory _message,
         uint128 _receiverGasLimitNative,
         uint128 _fee
-    ) internal returns (string memory) {
+    ) internal returns (bytes32) {
         require(_message.length > 0, "Invalid message");
         require(_fee > 0, "Invalid fee");
         require(chainEIDMappings[_chainId] > 0, "Invalid chain ID");
@@ -36,7 +36,7 @@ abstract contract LayerZeroBridge is OApp {
             payable(address(this))
         );
 
-        return TextUtils.toBase64(receipt.guid);
+        return receipt.guid;
     }
 
     function quote(

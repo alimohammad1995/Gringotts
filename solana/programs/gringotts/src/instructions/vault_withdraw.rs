@@ -38,7 +38,7 @@ impl VaultWithdraw<'_> {
                 },
                 signer_seeds,
             ),
-            params.amount,
+            if params.amount != 0 { params.amount } else { vault.lamports() },
         )?;
         Ok(())
     }

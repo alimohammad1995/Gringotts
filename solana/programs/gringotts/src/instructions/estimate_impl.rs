@@ -3,7 +3,7 @@ use crate::instructions::{
 };
 use crate::state::{Gringotts, Peer};
 use crate::utils::{bps, change_decimals, micro_bps, OptionsBuilder};
-use crate::{CHAIN_TRANSFER_DECIMALS, MAX_PRICE_AGE, NETWORK_DECIMALS};
+use crate::constants::{CHAIN_TRANSFER_DECIMALS, MAX_PRICE_AGE, NETWORK_DECIMALS};
 use anchor_lang::prelude::{Account, AccountInfo, Clock, Result, SolanaSysvar};
 use anchor_lang::{require, Key};
 use oapp::endpoint::instructions::QuoteParams;
@@ -63,19 +63,7 @@ pub fn estimate_marketplace(
         outbound_metadata.push(EstimateOutboundDetails {
             chain_id: outbound.chain_id,
             execution_gas: chain_execution_gas_price,
-            execution_gas_usdx: get_native_price(
-                chain_execution_gas_price,
-                CHAIN_TRANSFER_DECIMALS,
-                gringotts.pyth_price_feed_id,
-                &price_feed,
-            )?,
             transfer_gas: quote.native_fee,
-            transfer_gas_usdx: get_native_price(
-                quote.native_fee,
-                CHAIN_TRANSFER_DECIMALS,
-                gringotts.pyth_price_feed_id,
-                &price_feed,
-            )?,
         });
 
         total_transfer_gas_price = total_transfer_gas_price + quote.native_fee;

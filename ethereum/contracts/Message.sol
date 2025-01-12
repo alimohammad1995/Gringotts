@@ -4,6 +4,8 @@ pragma solidity ^0.8.10;
 import "solidity-bytes-utils/contracts/BytesLib.sol";
 
 uint8 constant MessageTypeChainTransfer = 1;
+uint8 constant MessageTypeChainRegisterOrder = 2;
+uint8 constant MessageTypeChainCompletion = 3;
 
 struct Message {
     uint8 header;

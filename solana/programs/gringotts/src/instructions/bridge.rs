@@ -1,3 +1,4 @@
+use crate::constants::CHAIN_TRANSFER_DECIMALS;
 use crate::msg_codec::{ChainTransfer, ChainTransferItem, Message, CHAIN_TRANSFER_TYPE};
 use crate::state::{Gringotts, Peer};
 use crate::utils::{bps, change_decimals, OptionsBuilder};
@@ -26,9 +27,6 @@ pub struct Bridge<'info> {
 
     #[account(mut, seeds = [VAULT_SEED], bump)]
     pub vault: SystemAccount<'info>,
-
-    #[account(seeds = [PEER_SEED, &gringotts.lz_eid.to_be_bytes()], bump = self_peer.bump)]
-    pub self_peer: Account<'info, Peer>,
 
     pub stable_coin_mint: Account<'info, Mint>,
     #[account(associated_token::mint = stable_coin_mint, associated_token::authority = gringotts)]
@@ -63,12 +61,9 @@ impl<'info> Bridge<'info> {
 
         let gringotts_stable_coin = &mut ctx.accounts.gringotts_stable_coin;
         let stable_coin_mint = &ctx.accounts.stable_coin_mint;
-        let self_peer = &ctx.accounts.self_peer;
 
         let remaining_accounts = ctx.remaining_accounts;
         let mut r = 0;
-
-        require!(self_peer.chain_id == gringotts.chain_id, BridgeErrorCode::InvalidParams);
 
         /*********** [Inbound transaction] ***********/
         let first_stable_coin_amount = gringotts_stable_coin.amount;
@@ -76,7 +71,7 @@ impl<'info> Bridge<'info> {
         for i in 0..params.inbound.items.len() {
             let item = &params.inbound.items[i];
 
-            if self_peer.stable_coins.contains(&item.asset) && stable_coin_mint.key().to_bytes() == item.asset {
+            if gringotts.has_stable_coin(item.asset) && stable_coin_mint.key().to_bytes() == item.asset {
                 let user_token_account = &remaining_accounts[r];
                 r += 1;
 
@@ -295,11 +290,6 @@ pub fn swap_on_jupiter<'info>(
             is_writable: acc.is_writable,
         })
         .collect();
-
-    // let accounts_infos: Vec<AccountInfo> = remaining_accounts
-    //     .iter()
-    //     .map(|acc| AccountInfo { ..acc.clone() })
-    //     .collect();
 
     let seeds = &[GRINGOTTS_SEED, &[gringotts.bump]];
     let signer_seeds = &[&seeds[..]];

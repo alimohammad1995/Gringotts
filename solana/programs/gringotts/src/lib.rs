@@ -10,16 +10,11 @@ use instructions::*;
 
 use oapp::{endpoint_cpi::LzAccount, LzReceiveParams};
 
-declare_id!("GhQn4LrN3RvdfHLQqB3DJbxk6aSgQvm3VRBMbTqGuzUk");
-
-pub const MAX_TRANSFERS: u8 = 4;
-pub const MAX_PRICE_AGE: u64 = 5 * 60;
-pub const NETWORK_DECIMALS: u8 = 9;
-pub const CHAIN_TRANSFER_DECIMALS: u8 = 6;
+declare_id!("Dh3ak9SbvubmtQTeq8kgDXhZeUKorKa5bt1x4PZ8Vebf");
 
 pub const GRINGOTTS_SEED: &[u8] = b"Gringotts";
+pub const ORDER_SEED: &[u8] = b"OrderItem";
 pub const VAULT_SEED: &[u8] = b"Vault";
-pub const ASSET_SEED: &[u8] = b"Asset";
 pub const PEER_SEED: &[u8] = b"Peer";
 pub const LZ_RECEIVE_TYPES_SEED: &[u8] = b"LzReceiveTypes";
 
@@ -35,8 +30,8 @@ pub mod gringotts {
         GringottsUpdate::apply(ctx, &params)
     }
 
-    pub fn destroy(ctx: Context<Destroy>) -> Result<()> {
-        instructions::destroy(ctx)
+    pub fn account_destroy(ctx: Context<AccountDestroy>, params: AccountDestroyParams) -> Result<()> {
+        AccountDestroy::apply(&ctx, &params)
     }
 
     pub fn peer_add(ctx: Context<PeerAdd>, params: PeerAddParams) -> Result<()> {
@@ -66,8 +61,8 @@ pub mod gringotts {
         LzReceive::apply(ctx, &params)
     }
 
-    pub fn lz_receive_types(
-        ctx: Context<LzReceiveTypes>,
+    pub fn lz_receive_types<'a>(
+        ctx: Context<'_, '_, 'a, 'a, LzReceiveTypes<'a>>,
         params: LzReceiveParams,
     ) -> Result<Vec<LzAccount>> {
         LzReceiveTypes::apply(&ctx, &params)
@@ -82,5 +77,9 @@ pub mod gringotts {
         params: BridgeRequest,
     ) -> Result<BridgeResponse> {
         Bridge::apply(ctx, &params)
+    }
+
+    pub fn test(ctx: Context<Test>, params: TestParams) -> Result<()> {
+        Test::apply(ctx, &params)
     }
 }

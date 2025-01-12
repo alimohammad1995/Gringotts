@@ -20,11 +20,11 @@ impl PeerUpdate<'_> {
         if let Some(address) = params.address {
             peer.address = address;
         }
-        if let Some(stable_coins) = &params.stable_coins {
-            peer.stable_coins = stable_coins.clone();
-        }
         if let Some(base_gas_estimate) = params.base_gas_estimate {
             peer.base_gas_estimate = base_gas_estimate;
+        }
+        if let Some(multi_send) = params.multi_send {
+            peer.multi_send = multi_send;
         }
 
         Ok(())
@@ -35,6 +35,6 @@ impl PeerUpdate<'_> {
 pub struct PeerUpdateParams {
     pub lz_eid: u32,
     pub address: Option<[u8; 32]>,
-    pub stable_coins: Option<Vec<[u8; 32]>>,
+    pub multi_send: Option<bool>,
     pub base_gas_estimate: Option<u64>,
 }

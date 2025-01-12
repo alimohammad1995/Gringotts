@@ -3,18 +3,10 @@ package connection
 type EstimateInboundTransfer struct {
 	AmountUsdx uint64 `borsh:"amount_usdx"`
 }
-
-type EstimateOutboundTransferItem struct {
-	Asset                   [32]byte `borsh:"asset"`
-	ExecutionGasAmount      uint64   `borsh:"execution_gas"`
-	ExecutionCommandLength  uint16   `borsh:"command_length"`
-	ExecutionMetadataLength uint16   `borsh:"metadata_length"`
-}
-
 type EstimateOutboundTransfer struct {
-	ChainId        uint8                          `borsh:"chain_id"`
-	MetadataLength uint16                         `borsh:"metadata_length"`
-	Items          []EstimateOutboundTransferItem `borsh:"items"`
+	ChainId       uint8  `borsh:"chain_id"`
+	ExecutionGas  uint64 `borsh:"execution_gas"`
+	MessageLength uint16 `borsh:"message_length"`
 }
 
 type EstimateRequest struct {
@@ -22,20 +14,18 @@ type EstimateRequest struct {
 	Outbounds []EstimateOutboundTransfer `borsh:"outbounds"`
 }
 
-type EstimateOutboundMetadata struct {
-	ChainID                uint8  `borsh:"chain_id"`
-	ExecutionGasAmount     uint64 `borsh:"execution_gas"`
-	ExecutionGasAmountUsdx uint64 `borsh:"execution_gas_usdx"`
-	TransferGasAmount      uint64 `borsh:"transfer_gas"`
-	TransferGasAmountUsdx  uint64 `borsh:"transfer_gas_usdx"`
+type EstimateOutboundDetails struct {
+	ChainID            uint8  `borsh:"chain_id"`
+	ExecutionGasAmount uint64 `borsh:"execution_gas"`
+	TransferGasAmount  uint64 `borsh:"transfer_gas"`
 }
 
 type EstimateResponse struct {
-	CommissionUsdx          uint64                     `borsh:"commission_usdx"`
-	CommissionDiscountUsdx  uint64                     `borsh:"commission_discount_usdx"`
-	TransferGasPriceUsdx    uint64                     `borsh:"transfer_gas_usdx"`
-	TransferGasDiscountUsdx uint64                     `borsh:"transfer_gas_discount_usdx"`
-	OutboundMetadata        []EstimateOutboundMetadata `borsh:"outbound_metadata"`
+	CommissionUsdx          uint64                    `borsh:"commission_usdx"`
+	CommissionDiscountUsdx  uint64                    `borsh:"commission_discount_usdx"`
+	TransferGasPriceUsdx    uint64                    `borsh:"transfer_gas_usdx"`
+	TransferGasDiscountUsdx uint64                    `borsh:"transfer_gas_discount_usdx"`
+	OutboundDetails         []EstimateOutboundDetails `borsh:"outbound_details"`
 }
 
 type Swap struct {
@@ -70,16 +60,4 @@ type BridgeOutboundTransfer struct {
 type BridgeRequest struct {
 	Inbound   BridgeInboundTransfer    `borsh:"inbound"`
 	Outbounds []BridgeOutboundTransfer `borsh:"outbounds"`
-}
-
-type SolanaTransferItem struct {
-	SwapAccountCount uint8  `borsh:"swap_account_count"`
-	SwapCommand      []byte `borsh:"swap_command"`
-}
-
-type SolanaTransfer struct {
-	AccountsAddress [][32]byte            `borsh:"accounts_address"`
-	AccountFlags    []byte                `borsh:"accounts_flags"`
-	AccountMapping  []byte                `borsh:"accounts_mapping"`
-	Items           []*SolanaTransferItem `borsh:"items"`
 }

@@ -2,13 +2,13 @@
 pragma solidity ^0.8.27;
 
 import {Blockable} from "./utils/Blockable.sol";
-import {MessageTypeChainTransfer} from "./Message.sol";
+import {MessageTypeChainTransfer, MessageTypeChainRegisterOrder, MessageTypeChainCompletion} from "./Message.sol";
 import {ChainTransfer, ChainTransferItem, ChainTransferLibrary, EVMTransferItem, EVMTransferLibrary} from "./ChainTransfer.sol";
-import {Config, GringottsAddress, ChainId} from "./Types.sol";
-import {Peer, PeerLibrary} from "./Peer.sol";
+import {Config, ConfigLibrary, GringottsAddress, ChainId} from "./Types.sol";
+import {Peer} from "./Peer.sol";
 import {Market} from "./Market.sol";
 import {Vault} from "./Vault.sol";
-import {AddressUtils, MathUtils} from "./utils/Utils.sol";
+import {AddressUtils, MathUtils, TextUtils} from "./utils/Utils.sol";
 import {LayerZeroBridge} from "./LayerZeroMessenger.sol";
 import {SendChainTransferEvent, ReceiveChainTransferEvent} from "./Events.sol";
 
@@ -22,6 +22,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausable {
     uint8 private constant CHAIN_TRANSFER_DECIMALS = 6;
     uint8 private constant MAX_TRANSFER = 8;
+    uint private constant MULTI_SEND_GAS_INCREASE = 50;
 
     ChainId private chainId;
     Config private config;
@@ -71,15 +72,13 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
     }
 
     struct BridgeResponse {
-        string[] messageIds;
+        bytes32[] messageIds;
     }
 
     function bridge(
         BridgeRequest memory _params
     ) external onlyNotBlocked whenNotPaused payable returns (BridgeResponse memory) {
         validateBridge(_params);
-
-        Peer memory self = gringottsAgents[chainId];
 
         uint256 netUSDX = 0;
 
@@ -88,7 +87,7 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
             BridgeInboundTransferItem memory item = _params.inbound.items[i];
             address inTransferAddress = AddressUtils.bytes32ToAddress(item.asset);
 
-            if (PeerLibrary.hasStableCoin(self, item.asset)) {
+            if (ConfigLibrary.hasStableCoin(config, item.asset)) {
                 IERC20Metadata stableToken = IERC20Metadata(inTransferAddress);
                 SafeERC20.safeTransferFrom(stableToken, msg.sender, address(this), item.amount);
 
@@ -155,10 +154,12 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
         EstimateOutboundDetails[] memory outboundMetaData = estimateResult.outboundDetails;
 
         /*********** [Send transfers] ***********/
-        string[] memory messageIds = new string[](_params.outbounds.length);
+        bytes32[] memory messageIds = new bytes32[](_params.outbounds.length);
 
         for (uint256 i = 0; i < _params.outbounds.length; i++) {
             BridgeOutboundTransfer memory bridgeOutbound = _params.outbounds[i];
+
+            Peer memory agent = gringottsAgents[bridgeOutbound.chainId];
 
             ChainTransferItem[]memory items = new ChainTransferItem[](bridgeOutbound.items.length);
             uint256 chainTotalAmountUSDX = 0;
@@ -179,18 +180,44 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
                 message: bridgeOutbound.message
             });
 
-            messageIds[i] = send(
-                bridgeOutbound.chainId,
-                MessageTypeChainTransfer,
-                ChainTransferLibrary.encode(chainTransfer),
-                uint128(outboundMetaData[i].executionGas),
-                uint128(outboundMetaData[i].transferGas)
-            );
+            if (agent.multiSend) {
+                messageIds[i] = send(
+                    bridgeOutbound.chainId,
+                    MessageTypeChainRegisterOrder,
+                    ChainTransferLibrary.encode(chainTransfer),
+                    uint128(agent.registerGasEstimate),
+                    uint128(outboundMetaData[i].transferGas)
+                );
+
+                send(
+                    bridgeOutbound.chainId,
+                    MessageTypeChainTransfer,
+                    abi.encodePacked(messageIds[i]),
+                    uint128(outboundMetaData[i].executionGas),
+                    uint128(outboundMetaData[i].transferGas)
+                );
+
+                send(
+                    bridgeOutbound.chainId,
+                    MessageTypeChainCompletion,
+                    abi.encodePacked(messageIds[i]),
+                    uint128(agent.completionGasEstimate),
+                    uint128(outboundMetaData[i].transferGas)
+                );
+            } else {
+                messageIds[i] = send(
+                    bridgeOutbound.chainId,
+                    MessageTypeChainTransfer,
+                    ChainTransferLibrary.encode(chainTransfer),
+                    uint128(outboundMetaData[i].executionGas),
+                    uint128(outboundMetaData[i].transferGas)
+                );
+            }
 
             emit SendChainTransferEvent(
                 msg.sender,
                 bridgeOutbound.chainId,
-                messageIds[i],
+                TextUtils.toBase64(messageIds[i]),
                 chainTotalAmountUSDX
             );
         }
@@ -204,22 +231,19 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
         BridgeRequest memory _params
     ) internal view {
         require(_params.inbound.amountUSDX > 0, "Invalid amount");
-        require(ChainId.unwrap(gringottsAgents[chainId].chainID) > 0, "Chain not found");
 
         /************ [Validate inbound transfer] ***********/
-        Peer memory self = gringottsAgents[chainId];
-
         for (uint256 i = 0; i < _params.inbound.items.length; i++) {
             BridgeInboundTransferItem memory item = _params.inbound.items[i];
 
             require(item.amount > 0, "Invalid amount");
             require(GringottsAddress.unwrap(item.asset) != bytes32(0), "Invalid asset");
 
-            if (PeerLibrary.hasStableCoin(self, item.asset) == false) {
+            if (ConfigLibrary.hasStableCoin(config, item.asset) == false) {
                 require(GringottsAddress.unwrap(item.executor) != bytes32(0), "Invalid executor");
                 require(item.command.length > 0, "Invalid command");
                 require(GringottsAddress.unwrap(item.stableToken) != bytes32(0), "Invalid executor");
-                require(PeerLibrary.hasStableCoin(self, item.stableToken), "Invalid stable coin");
+                require(ConfigLibrary.hasStableCoin(config, item.stableToken), "Invalid stable coin");
             }
         }
 
@@ -270,9 +294,7 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
         ChainId chainId;
 
         uint256 executionGas;
-        uint256 executionGasUSDX;
         uint256 transferGas;
-        uint256 transferGasUSDX;
     }
 
     struct EstimateResponse {
@@ -298,21 +320,45 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
             Peer memory agent = gringottsAgents[outbound.chainId];
             require(ChainId.unwrap(agent.chainID) > 0, "Chain not found");
 
+            uint256 transferGasPrice = 0;
             uint256 chainExecutionGasPrice = agent.baseGasEstimate + outbound.executionGas;
 
-            uint256 transferGasPrice = quote(
-                outbound.chainId,
-                MessageTypeChainTransfer,
-                new bytes(outbound.messageLength),
-                uint128(chainExecutionGasPrice)
-            );
+            if (agent.multiSend) {
+                transferGasPrice += quote(
+                    outbound.chainId,
+                    MessageTypeChainRegisterOrder,
+                    new bytes(outbound.messageLength),
+                    uint128(agent.registerGasEstimate)
+                );
+
+                transferGasPrice += quote(
+                    outbound.chainId,
+                    MessageTypeChainTransfer,
+                    new bytes(32),
+                    uint128(chainExecutionGasPrice)
+                );
+
+                transferGasPrice += quote(
+                    outbound.chainId,
+                    MessageTypeChainCompletion,
+                    new bytes(32),
+                    uint128(agent.completionGasEstimate)
+                );
+
+                chainExecutionGasPrice += agent.registerGasEstimate + agent.completionGasEstimate;
+            } else {
+                transferGasPrice += quote(
+                    outbound.chainId,
+                    MessageTypeChainTransfer,
+                    new bytes(outbound.messageLength),
+                    uint128(chainExecutionGasPrice)
+                );
+            }
 
             outboundDetails[i] = EstimateOutboundDetails({
                 chainId: outbound.chainId,
                 executionGas: chainExecutionGasPrice,
-                executionGasUSDX: getNativePriceUSD(chainExecutionGasPrice, CHAIN_TRANSFER_DECIMALS),
-                transferGas: transferGasPrice,
-                transferGasUSDX: getNativePriceUSD(transferGasPrice, CHAIN_TRANSFER_DECIMALS)
+                transferGas: transferGasPrice
             });
 
             totalTransferGasPrice = totalTransferGasPrice + transferGasPrice;
@@ -343,11 +389,9 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
     ) internal whenNotPaused override {
         if (_header == MessageTypeChainTransfer) {
             ChainTransfer memory transfer = ChainTransferLibrary.decode(_message);
-            EVMTransferItem[] memory items = EVMTransferLibrary.decode(transfer.message);
+            EVMTransferItem[] memory items = EVMTransferLibrary.decode(config, transfer.message);
 
             require(transfer.items.length == items.length, "Invalid items");
-
-            Peer memory self = gringottsAgents[chainId];
 
             for (uint256 i = 0; i < transfer.items.length; i++) {
                 ChainTransferItem memory chainItem = transfer.items[i];
@@ -355,7 +399,7 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
 
                 address recipient = AddressUtils.bytes32ToAddress(evmItem.recipient);
 
-                if (PeerLibrary.hasStableCoin(self, evmItem.asset)) {
+                if (ConfigLibrary.hasStableCoin(config, evmItem.asset)) {
                     address stableTokenAddress = AddressUtils.bytes32ToAddress(evmItem.asset);
                     IERC20Metadata stableToken = IERC20Metadata(stableTokenAddress);
 
@@ -390,6 +434,39 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
 
                 emit ReceiveChainTransferEvent(_chainId, _guid, AddressUtils.bytes32ToAddress(evmItem.asset), recipient, chainItem.amountUSDX);
             }
+        }
+    }
+
+    event TestMessage (bytes32 messageId);
+
+    function testSend(ChainId _chainID, uint8 _header, uint8 _header2, bytes memory _message, uint128 _gas, bool multi) external {
+        if (multi) {
+            bytes32 x = send(
+                _chainID,
+                _header,
+                _message,
+                _gas,
+                uint128(quote(_chainID, _header, _message, _gas))
+            );
+            emit TestMessage(x);
+
+            bytes32 y = send(
+                _chainID,
+                _header2,
+                abi.encodePacked(x),
+                _gas,
+                uint128(quote(_chainID, _header, abi.encodePacked(x), _gas))
+            );
+            emit TestMessage(y);
+        } else {
+            bytes32 x = send(
+                _chainID,
+                _header,
+                _message,
+                _gas,
+                uint128(quote(_chainID, _header, _message, _gas))
+            );
+            emit TestMessage(x);
         }
     }
 

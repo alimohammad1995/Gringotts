@@ -1,5 +1,5 @@
 pub mod bridge;
-pub mod destroy;
+pub mod account_destroy;
 pub mod estimate;
 pub mod estimate_impl;
 pub mod gringotts_initialize;
@@ -11,9 +11,10 @@ pub mod token_withdraw;
 pub mod vault_withdraw;
 pub mod token_fund;
 pub mod gringotts_update;
+pub mod test;
 
 pub use bridge::*;
-pub use destroy::*;
+pub use account_destroy::*;
 pub use estimate::*;
 pub use estimate_impl::*;
 pub use gringotts_initialize::*;
@@ -22,6 +23,7 @@ pub use lz_receive::*;
 pub use lz_receive_types::*;
 pub use peer_add::*;
 pub use peer_update::*;
+pub use test::*;
 pub use token_fund::*;
 pub use token_withdraw::*;
 pub use vault_withdraw::*;

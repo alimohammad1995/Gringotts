@@ -12,6 +12,7 @@ import {
     UlnProgram
 } from '@layerzerolabs/lz-solana-sdk-v2'
 import NodeWallet from "@coral-xyz/anchor/dist/cjs/nodewallet";
+import {ASSOCIATED_TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync, TOKEN_PROGRAM_ID} from "@solana/spl-token";
 
 const provider = anchor.AnchorProvider.env();
 anchor.setProvider(anchor.AnchorProvider.env());
@@ -21,10 +22,8 @@ const SOL_EID = 30168;
 const ARB_CHAIN_ID = 1;
 const SOL_CHAIN_ID = 2;
 
-const ARB_ADDRESS = "0xcc9462adf0a45db3e9ab95b52829e638f886e1b3";
-
-const ARB_USDC = "0xaf88d065e77c8cc2239327c5edb3a432268e5831";
-const SOL_USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+const ARB_ADDRESS = "0x02fa4ad1fe96e10f81a258bbe29e0392124bf27c";
+const SOL_USDC = new PublicKey("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 
 const program = anchor.workspace.Gringotts as Program<Gringotts>;
 const wallet = provider.wallet as NodeWallet;
@@ -39,21 +38,18 @@ const ulnProgram = new UlnProgram.Uln(new PublicKey('7a4WjyR8VZ7yZz5XJAKm39BUGn5
 const executorProgram = new PublicKey('6doghB248px58JSSwG4qejQ46kFMW4AMj7vzJnWZHNZn');
 
 const [gringottsPDA] = PublicKey.findProgramAddressSync(
-    [Buffer.from(GRINGOTTS_SEED)],
-    program.programId
+    [Buffer.from(GRINGOTTS_SEED)], program.programId
 );
 
 const [vaultPDA] = PublicKey.findProgramAddressSync(
-    [Buffer.from(VAULT_SEED)],
-    program.programId
+    [Buffer.from(VAULT_SEED)], program.programId
 );
 
+const [lzReceiveTypesPDA] = PublicKey.findProgramAddressSync(
+    [Buffer.from(LZ_RECEIVE_TYPES_SEED), gringottsPDA.toBytes()], program.programId
+);
 
 async function init() {
-    const [lzReceiveTypesPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from(LZ_RECEIVE_TYPES_SEED), gringottsPDA.toBytes()], program.programId
-    );
-
     const [oAppRegistry] = endpointProgram.deriver.oappRegistry(gringottsPDA);
     const [eventAuthority] = new EventPDADeriver(endpointProgram.program).eventAuthority()
 
@@ -78,6 +74,7 @@ async function init() {
         .gringottsInitialize({
             chainId: SOL_CHAIN_ID,
             lzEid: SOL_EID,
+            stableCoins: [Array.from(utils.arrayify(SOL_USDC.toBytes()))],
             vaultFund: new BN(10 * 1000 * 1000),
             lzEndpointProgram: endpointProgram.program,
             pythPriceFeedId: '0xef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d',
@@ -87,7 +84,6 @@ async function init() {
             gringotts: gringottsPDA,
             vault: vaultPDA,
             lzReceiveTypesPDA: lzReceiveTypesPDA,
-            owner: wallet.publicKey,
             systemProgram: SystemProgram.programId,
         })
         .remainingAccounts(registerOAppAccounts)
@@ -103,32 +99,18 @@ async function init() {
 }
 
 async function addPeer(
-    chain_id: number,
-    remote: number,
     remotePeer: Uint8Array,
 ) {
     const [chainPDA] = PublicKey.findProgramAddressSync(
-        [Buffer.from(PEER_SEED), new BN(remote).toArrayLike(Buffer, 'be', 4)],
+        [Buffer.from(PEER_SEED), new BN(ARB_EID).toArrayLike(Buffer, 'be', 4)],
         program.programId
     );
 
-    let stableCoins;
-
-    if (remote == ARB_EID) {
-        stableCoins = [
-            Array.from(utils.arrayify(utils.hexZeroPad(ARB_USDC, 32))),
-        ];
-    } else {
-        stableCoins = [
-            Array.from(utils.arrayify(new PublicKey(SOL_USDC).toBytes())),
-        ];
-    }
-
     const tx = await program.methods
         .peerAdd({
-            chainId: chain_id,
-            lzEid: remote,
-            stableCoins: stableCoins,
+            chainId: ARB_CHAIN_ID,
+            lzEid: ARB_EID,
+            multiSend: false,
             baseGasEstimate: new BN(30_000),
             address: Array.from(remotePeer),
         })
@@ -198,22 +180,50 @@ async function setOappExecutor(remote: number) {
     console.log("tx", tx);
 }
 
+async function fund_usdc_token() {
+    const gringottsUSDC = getAssociatedTokenAddressSync(
+        SOL_USDC,
+        gringottsPDA,
+        true
+    );
+
+    const userUSDC = getAssociatedTokenAddressSync(
+        SOL_USDC,
+        wallet.publicKey,
+    );
+
+    console.log("User USDC", userUSDC.toBase58());
+    console.log("Gringotts USDC", gringottsUSDC.toBase58());
+
+    const tx1 = await program.methods.tokenFund({
+        amount: new BN(6 * 1000 * 1000)
+    }).accounts({
+        gringotts: gringottsPDA,
+        tokenMint: SOL_USDC,
+        gringottsTokenAccount: gringottsUSDC,
+        ownerTokenAccount: userUSDC,
+        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId
+    }).rpc()
+
+    console.log(tx1);
+}
 
 async function main() {
-    const chainID = ARB_EID;
     const peer = utils.arrayify(utils.hexZeroPad(ARB_ADDRESS, 32));
 
     console.log("Gringotts PDA", gringottsPDA.toBase58());
     console.log("Vault PDA", vaultPDA.toBase58());
 
     // await init();
-    // await addPeer(ARB_CHAIN_ID, chainID, peer); // ARB
-    // await addPeer(SOL_CHAIN_ID, SOL_EID, utils.arrayify(program.programId.toBytes())); // SOL
-    // await handleSend(chainID);
-    // await handleReceive(chainID);
-    // await handleNonce(chainID, peer);
-    // await initUlnConfig(chainID);
-    // await setOappExecutor(chainID);
+    // await addPeer(peer); // ARB
+    // await handleSend(ARB_EID);
+    // await handleReceive(ARB_EID);
+    // await handleNonce(ARB_EID, peer);
+    // await initUlnConfig(ARB_EID);
+    // await setOappExecutor(ARB_EID);
+    // await fund_usdc_token();
 }
 
 async function sendAndConfirm(

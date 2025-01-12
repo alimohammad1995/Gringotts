@@ -26,9 +26,9 @@ impl PeerAdd<'_> {
 
         peer.chain_id = params.chain_id;
         peer.lz_eid = params.lz_eid;
+        peer.multi_send = params.multi_send;
         peer.address = params.address;
 
-        peer.stable_coins = params.stable_coins.clone();
         peer.base_gas_estimate = params.base_gas_estimate;
 
         Ok(())
@@ -40,8 +40,6 @@ pub struct PeerAddParams {
     pub chain_id: u8,
     pub lz_eid: u32,
     pub address: [u8; 32],
-
-    pub stable_coins: Vec<[u8; 32]>,
-
+    pub multi_send: bool,
     pub base_gas_estimate: u64,
 }

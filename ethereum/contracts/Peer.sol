@@ -8,18 +8,10 @@ struct Peer {
     ChainId chainID;
     GringottsAddress endpoint;
     uint32 lzEID;
-    GringottsAddress[] stableCoins;
+
+    bool multiSend;
+
     uint128 baseGasEstimate;
-}
-
-library PeerLibrary {
-    function hasStableCoin(Peer memory agent, GringottsAddress stableCoin) internal pure returns (bool) {
-        for (uint256 i = 0; i < agent.stableCoins.length; i++) {
-            if (GringottsAddress.unwrap(agent.stableCoins[i]) == GringottsAddress.unwrap(stableCoin)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
+    uint128 registerGasEstimate;
+    uint128 completionGasEstimate;
 }

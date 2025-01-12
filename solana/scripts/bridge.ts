@@ -178,12 +178,15 @@ async function createAddressLookup() {
         receiver: utils.hexlify(RECEIVER),
     }
     const accountsEx = await endpointProgram.getSendIXAccountMetaForCPI(provider.connection, vaultPDA, packetPath, ulnProgram);
+    const address = accountsEx.map((a) => a.pubkey);
+    address.push(new PublicKey("HjVcDEcpjVvzwEnaHkZgdrV2pV2DoFcg7TyemtMovuZg"));
+    address.push(new PublicKey("EVPzMgjbbejQEv8AW1kr4CJidApoqMh1RovB3r2ZVi5"));
 
     const extendInstruction = AddressLookupTableProgram.extendLookupTable({
         payer: wallet.payer.publicKey,
         authority: wallet.payer.publicKey,
         lookupTable: new PublicKey("BLakf36faA77C5hG3WkzUJzBnPcACLreUNqPYsbhyULh"),
-        addresses: accountsEx.map((a) => a.pubkey),
+        addresses: address,
     });
 
     const t2 = new Transaction().add(extendInstruction);
@@ -194,9 +197,27 @@ async function createAddressLookup() {
     console.log(s2);
 }
 
+async function lzReceive() {
+    const tx = await program.methods.lzReceiveTypes({
+        srcEid: ARB_EID,
+        sender: Array.from(utils.arrayify(utils.hexZeroPad(ARB_ADDRESS, 32))),
+        nonce: new BN(2),
+        guid: Array.from(utils.arrayify(utils.hexZeroPad("0x0", 32))),
+        message: Buffer.from("010100000000002cad430428d7938c2685268928284987dd9b46409bbf1e22ea56285d653a7fb9abecce03ef31fbe855115c624e9b35d3ea3e1ac581a4b213487345869e0f60f599d8cc66c6fa7af3bedbad3a3d65f36aabc97431b1bbe4c2d2f6e0e47ca60203452f5d617d7cdbe036610dfd0b509d8763c05f438474dc88711dd48e5071145043e0a01d90040607080500", 'hex'),
+        extraData: Buffer.from([]),
+    }).accounts({
+        gringotts: gringottsPDA,
+    }).simulate()
+
+    console.log(tx);
+}
+
 async function main() {
     // await createAddressLookup();
-    await bridge(ARB_EID);
+    // await bridge(ARB_EID);
+    // await lzReceive();
+    console.log(gringottsPDA.toBase58());
+    console.log(vaultPDA.toBase58());
 }
 
 main()

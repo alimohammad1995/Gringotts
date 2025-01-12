@@ -2,10 +2,8 @@ package provider
 
 import (
 	"encoding/base64"
-	"fmt"
 	"github.com/go-resty/resty/v2"
 	"github.com/holiman/uint256"
-	"gringotts/models"
 	"gringotts/utils"
 	"strconv"
 )
@@ -40,8 +38,7 @@ func (o *Jupiter) GetSwap(params *SwapParams) (*Swap, error) {
 		alts = append(alts, alt.(string))
 	}
 
-	accounts, metadata := o.createMeta(params.Chain, swapAccounts)
-	fmt.Println(outAmount)
+	accounts, metadata := o.createMeta(swapAccounts)
 
 	return &Swap{
 		ExecutorAddress: JupiterAddress,
@@ -54,12 +51,9 @@ func (o *Jupiter) GetSwap(params *SwapParams) (*Swap, error) {
 	}, nil
 }
 
-func (o *Jupiter) createMeta(chain models.Blockchain, swapAccounts []interface{}) ([]Account, []byte) {
+func (o *Jupiter) createMeta(swapAccounts []interface{}) ([]Account, []byte) {
 	metadata := []byte{byte(len(swapAccounts))}
-	accounts := []Account{
-		{Address: models.GetGringotts(chain), IsSigner: false, IsWriteable: false},
-		{Address: models.GetVault(chain), IsSigner: false, IsWriteable: false},
-	}
+	var accounts []Account
 
 	for _, swapAccount := range swapAccounts {
 		pubkey := swapAccount.(map[string]interface{})["pubkey"].(string)

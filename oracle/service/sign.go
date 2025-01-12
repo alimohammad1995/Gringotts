@@ -66,7 +66,7 @@ func createSolanaTransaction(
 		totalGas := uint64(0)
 
 		for i, transaction := range transactions {
-			gas, _, _ := GetExecutionParams(chainIter, transaction.ToToken)
+			gas, _ := GetExecutionParams(chainIter, transaction.ToToken)
 
 			outboundTransferItem := connection.BridgeOutboundTransferItem{
 				DistributionBP: uint16(transaction.DistributionBPS),
@@ -213,7 +213,7 @@ func createEVMTransaction(
 		totalGas := int64(0)
 
 		for i, transaction := range transactions {
-			gas, _, _ := GetExecutionParams(chain, transaction.ToToken)
+			gas, _ := GetExecutionParams(chain, transaction.ToToken)
 			totalGas = totalGas + int64(gas)
 
 			transactionItems[i] = connection.GringottsBridgeOutboundTransferItem{
@@ -276,84 +276,111 @@ func getMessage(chain models.Blockchain, transactions []*models.Transaction) []b
 }
 
 func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []byte {
-	accounts := make([]*models.Account, 0)
-
+	mainFromToken := ""
 	for _, transaction := range transactions {
-		accounts = append(accounts,
-			&models.Account{Address: transaction.Recipient, IsSigner: false, IsWritable: transaction.ToToken == ""},
+		mainFromToken = transaction.FromToken
+	}
+
+	stableIndex := 0
+	for i, stableCoin := range models.GetStableCoins(chain) {
+		if stableCoin.Address == mainFromToken {
+			stableIndex = i
+			break
+		}
+	}
+
+	metadata := []byte{byte(stableIndex)}
+
+	allAccounts := make([]*models.Account, 0)
+	for _, transaction := range transactions {
+		allAccounts = append(allAccounts,
+			&models.Account{Address: transaction.Recipient, IsWritable: transaction.ToToken == ""},
 		)
 
 		if transaction.Swap == nil {
-			accounts = append(accounts,
-				&models.Account{Address: transaction.ToToken, IsSigner: false, IsWritable: false},
-
-				&models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), transaction.ToToken), IsSigner: false, IsWritable: true},
-				&models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.ToToken), IsSigner: false, IsWritable: true},
+			allAccounts = append(allAccounts,
+				&models.Account{Address: mainFromToken},
+				&models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, mainFromToken)},
 			)
 		} else {
 			if transaction.ToToken != "" {
-				accounts = append(accounts,
-					&models.Account{Address: transaction.ToToken, IsSigner: false, IsWritable: false},
-					&models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.ToToken), IsSigner: false, IsWritable: true},
+				allAccounts = append(allAccounts,
+					&models.Account{Address: transaction.ToToken},
+					&models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.ToToken), IsWritable: true},
 				)
 			} else {
-				accounts = append(accounts,
-					&models.Account{Address: models.NativeMint, IsSigner: false, IsWritable: false},
-					&models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), models.NativeMint), IsSigner: false, IsWritable: true},
+				allAccounts = append(allAccounts,
+					&models.Account{Address: models.NativeMint},
+					&models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), models.NativeMint), IsWritable: true},
 				)
 			}
 
-			accounts = append(accounts,
-				&models.Account{Address: models.GetAssociatedTokenAddress(transaction.Recipient, transaction.FromToken), IsSigner: false, IsWritable: true},
-
-				&models.Account{Address: transaction.FromToken, IsSigner: false, IsWritable: false},
-				&models.Account{Address: models.GetAssociatedTokenAddress(models.GetGringotts(chain), transaction.FromToken), IsSigner: false, IsWritable: true},
-
-				&models.Account{Address: provider.JupiterAddress, IsSigner: false, IsWritable: false},
-			)
-
 			for _, acc := range transaction.Swap.Accounts {
-				accounts = append(accounts,
-					&models.Account{Address: acc.Address, IsSigner: false, IsWritable: acc.IsWritable},
+				allAccounts = append(allAccounts,
+					&models.Account{Address: acc.Address, IsWritable: acc.IsWritable},
 				)
 			}
 		}
 	}
 
-	dontSendAccount := map[string]*models.Account{
-		models.GetGringotts(chain):                         {Address: models.GetGringotts(chain)},
-		models.GetVault(chain):                             {Address: models.GetVault(chain)},
-		solana.SPLAssociatedTokenAccountProgramID.String(): {Address: solana.SPLAssociatedTokenAccountProgramID.String()},
-		solana.TokenProgramID.String():                     {Address: solana.TokenProgramID.String()},
-		solana.SystemProgramID.String():                    {Address: solana.SystemProgramID.String()},
+	gringottsStable := models.GetAssociatedTokenAddress(models.GetGringotts(chain), mainFromToken)
+
+	dontSendAccount := map[string]bool{
+		models.GetGringotts(chain):                         true,
+		models.GetVault(chain):                             true,
+		solana.SPLAssociatedTokenAccountProgramID.String(): true,
+		solana.TokenProgramID.String():                     true,
+		solana.SystemProgramID.String():                    true,
+		mainFromToken:                                      true,
+		gringottsStable:                                    true,
+		provider.JupiterAddress:                            true,
+	}
+	for _, transaction := range transactions {
+
+		if transaction.Swap == nil {
+			userStable := models.GetAssociatedTokenAddress(transaction.Recipient, mainFromToken)
+			dontSendAccount[userStable] = true
+		} else {
+			if transaction.ToToken == "" {
+				gringottsWSOL := models.GetAssociatedTokenAddress(models.GetGringotts(chain), models.NativeMint)
+				dontSendAccount[gringottsWSOL] = true
+
+			} else {
+				associatedToken := models.GetAssociatedTokenAddress(transaction.Recipient, transaction.ToToken)
+				dontSendAccount[associatedToken] = true
+			}
+		}
 	}
 
-	accountsMap := make(map[string]*models.Account)
-	for _, account := range accounts {
-		if _, ok := dontSendAccount[account.Address]; ok {
+	// Accounts need to be sent
+	sendingAccountsMap := make(map[string]*models.Account)
+	for _, account := range allAccounts {
+		if dontSendAccount[account.Address] {
 			continue
 		}
 
-		if _, ok := accountsMap[account.Address]; ok {
-			accountsMap[account.Address].IsWritable = accountsMap[account.Address].IsWritable || account.IsWritable
+		if _, ok := sendingAccountsMap[account.Address]; ok {
+			sendingAccountsMap[account.Address].IsWritable = sendingAccountsMap[account.Address].IsWritable || account.IsWritable
 		} else {
-			accountsMap[account.Address] = account
+			sendingAccountsMap[account.Address] = account
 		}
 	}
 
-	addressMap := map[string]int{
+	addressMap := map[string]byte{
 		models.GetGringotts(chain):                         0,
-		models.GetVault(chain):                             1,
-		solana.SPLAssociatedTokenAccountProgramID.String(): 2,
-		solana.TokenProgramID.String():                     3,
-		solana.SystemProgramID.String():                    4,
+		solana.SPLAssociatedTokenAccountProgramID.String(): 1,
+		solana.TokenProgramID.String():                     2,
+		solana.SystemProgramID.String():                    3,
+		provider.JupiterAddress:                            4,
+		mainFromToken:                                      5,
+		gringottsStable:                                    6,
 	}
 
-	index := 5
-	flags := ""
+	index := byte(len(addressMap))
 
-	metadata := []byte{byte(len(accountsMap))}
-	for _, account := range accountsMap {
+	flags := ""
+	metadata = append(metadata, byte(len(sendingAccountsMap)))
+	for _, account := range sendingAccountsMap {
 		metadata = append(metadata, utils.FromByte32ToByteSOL(account.Address)...)
 
 		addressMap[account.Address] = index
@@ -364,40 +391,79 @@ func getMetaData(chain models.Blockchain, transactions []*models.Transaction) []
 		} else {
 			flags = flags + "0"
 		}
-
-		fmt.Println(account.Address)
 	}
-	fmt.Println(len(accountsMap))
-
 	metadata = append(metadata, utils.ZeroOneStringToByteArray(flags)...)
-	metadata = append(metadata, byte(len(accounts)))
 
-	for _, account := range accounts {
-		metadata = append(metadata, byte(addressMap[account.Address]))
-	}
-
-	itemsFlag := ""
 	for _, transaction := range transactions {
+		address := ""
+
 		if transaction.Swap == nil {
-			itemsFlag = itemsFlag + "0"
+			address = models.GetAssociatedTokenAddress(transaction.Recipient, mainFromToken)
 		} else {
-			itemsFlag = itemsFlag + "1"
+			if transaction.ToToken == "" {
+				address = models.GetAssociatedTokenAddress(models.GetGringotts(chain), models.NativeMint)
+			} else {
+				address = models.GetAssociatedTokenAddress(transaction.Recipient, transaction.ToToken)
+			}
+		}
+
+		if _, ok := addressMap[address]; !ok && address != "" {
+			addressMap[address] = index
+			index++
 		}
 	}
 
-	metadata = append(metadata, utils.ZeroOneStringToByteArray(itemsFlag)...)
+	for i, add := range addressMap {
+		fmt.Println(add, " -> ", i)
+	}
 
 	for _, transaction := range transactions {
+		metadata = append(metadata, addressMap[transaction.Recipient])
+
 		if transaction.Swap == nil {
-			continue
+			userStable := models.GetAssociatedTokenAddress(transaction.Recipient, mainFromToken)
+
+			metadata = append(metadata, addressMap[mainFromToken])
+			metadata = append(metadata, addressMap[userStable])
 		} else {
+			fmt.Println("====================================================")
+			for _, acc := range transaction.Swap.Accounts {
+				fmt.Println(acc.Address)
+			}
+			fmt.Println("====================================================")
+
+			if transaction.ToToken == "" {
+				gringottsWSOL := models.GetAssociatedTokenAddress(models.GetGringotts(chain), models.NativeMint)
+
+				metadata = append(metadata, addressMap[models.NativeMint])
+				metadata = append(metadata, addressMap[gringottsWSOL])
+			} else {
+				associatedToken := models.GetAssociatedTokenAddress(transaction.Recipient, transaction.ToToken)
+
+				metadata = append(metadata, addressMap[transaction.ToToken])
+				metadata = append(metadata, addressMap[associatedToken])
+			}
+
+			z := []byte{}
 			metadata = append(metadata, byte(len(transaction.Swap.Accounts)))
+			z = append(z, byte(len(transaction.Swap.Accounts)))
+			for _, account := range transaction.Swap.Accounts {
+				metadata = append(metadata, addressMap[account.Address])
+				z = append(z, addressMap[account.Address])
+
+				if _, ok := addressMap[account.Address]; !ok {
+					fmt.Println("KIR -> ", account.Address)
+				}
+			}
+			fmt.Println("Swap accounts -> ", z)
 
 			command := utils.FromHex(transaction.Swap.Command)
 			metadata = append(metadata, utils.ToBigEndianBytes(uint16(len(command)))...)
 			metadata = append(metadata, command...)
 		}
 	}
+
+	fmt.Println(utils.ToHex(metadata))
 
 	return metadata
 }

@@ -5,13 +5,13 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-gringotts = "GhQn4LrN3RvdfHLQqB3DJbxk6aSgQvm3VRBMbTqGuzUk"
+gringotts = "Dh3ak9SbvubmtQTeq8kgDXhZeUKorKa5bt1x4PZ8Vebf"
 
 [programs.localnet]
-gringotts = "GhQn4LrN3RvdfHLQqB3DJbxk6aSgQvm3VRBMbTqGuzUk"
+gringotts = "Dh3ak9SbvubmtQTeq8kgDXhZeUKorKa5bt1x4PZ8Vebf"
 
 [programs.mainnet]
-gringotts = "GhQn4LrN3RvdfHLQqB3DJbxk6aSgQvm3VRBMbTqGuzUk"
+gringotts = "Dh3ak9SbvubmtQTeq8kgDXhZeUKorKa5bt1x4PZ8Vebf"
 
 [registry]
 url = "https://api.apr.dev"

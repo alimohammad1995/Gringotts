@@ -1,9 +1,8 @@
 package config
 
 const ChainTransferDecimals = 6
-const DefaultSlippageBPS = 100
+const DefaultSlippageBPS = 500
 const MaxCommandLength = 1024
-const MaxMetaDataLength = 0
 
 const PriceDecimals = 9
 const ConversionFactor = 0.995

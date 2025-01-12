@@ -17,9 +17,18 @@ impl GringottsUpdate<'_> {
     pub fn apply(ctx: Context<GringottsUpdate>, params: &GringottsUpdateParams) -> Result<()> {
         let gringotts = &mut ctx.accounts.gringotts;
 
-        gringotts.commission_micro_bps = params.commission_micro_bps;
-        gringotts.commission_discount_bps = params.commission_discount_bps;
-        gringotts.gas_discount_bps = params.gas_discount_bps;
+        if let Some(commission_micro_bps) = params.commission_micro_bps {
+            gringotts.commission_micro_bps = commission_micro_bps;
+        }
+        if let Some(commission_discount_bps) = params.commission_discount_bps {
+            gringotts.commission_discount_bps = commission_discount_bps;
+        }
+        if let Some(gas_discount_bps) = params.gas_discount_bps {
+            gringotts.gas_discount_bps = gas_discount_bps;
+        }
+        if let Some(stable_coins) = &params.stable_coins {
+            gringotts.stable_coins = stable_coins.clone();
+        }
 
         Ok(())
     }
@@ -27,7 +36,8 @@ impl GringottsUpdate<'_> {
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct GringottsUpdateParams {
-    pub commission_micro_bps: u32,
-    pub commission_discount_bps: u32,
-    pub gas_discount_bps: u32,
+    pub commission_micro_bps: Option<u32>,
+    pub commission_discount_bps: Option<u32>,
+    pub gas_discount_bps: Option<u32>,
+    pub stable_coins: Option<Vec<[u8; 32]>>,
 }

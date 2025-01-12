@@ -7,13 +7,6 @@ import (
 	"math/big"
 	"strings"
 
-	"gringotts/blockchain"
-	"gringotts/config"
-	"gringotts/connection"
-	"gringotts/models"
-	"gringotts/provider"
-	"gringotts/utils"
-
 	solana_client "github.com/blocto/solana-go-sdk/client"
 	solana "github.com/blocto/solana-go-sdk/common"
 	"github.com/blocto/solana-go-sdk/types"
@@ -21,6 +14,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/holiman/uint256"
 	"github.com/near/borsh-go"
+	"gringotts/blockchain"
+	"gringotts/config"
+	"gringotts/connection"
+	"gringotts/models"
+	"gringotts/provider"
 )
 
 func EstimateMarketplace(
@@ -46,22 +44,20 @@ func EstimateMarketplaceSolana(
 	}
 	outbounds := make([]connection.EstimateOutboundTransfer, 0, len(dstItems))
 	for chainIter, assets := range dstItems {
-		items := make([]connection.EstimateOutboundTransferItem, 0, len(assets))
+		gas := uint64(0)
+		totalMessageLength := uint16(0)
 
 		for _, asset := range assets {
-			executionGas, commendLength, metadataLength := GetExecutionParams(chainIter, asset)
+			executionGas, commendLength := GetExecutionParams(chainIter, asset)
 
-			items = append(items, connection.EstimateOutboundTransferItem{
-				Asset:                   utils.ToByte32(asset),
-				ExecutionGasAmount:      executionGas,
-				ExecutionCommandLength:  commendLength,
-				ExecutionMetadataLength: metadataLength,
-			})
+			gas = gas + executionGas
+			totalMessageLength = totalMessageLength + commendLength
 		}
 
 		outbounds = append(outbounds, connection.EstimateOutboundTransfer{
-			ChainId: chainIter.GetId(),
-			Items:   items,
+			ChainId:       chainIter.GetId(),
+			ExecutionGas:  gas,
+			MessageLength: totalMessageLength,
 		})
 	}
 
@@ -166,10 +162,10 @@ func estimateMarketplaceEVM(
 		totalMessageLength := uint16(0)
 
 		for _, asset := range assets {
-			executionGas, commendLength, metadataLength := GetExecutionParams(chainIter, asset)
+			executionGas, commendLength := GetExecutionParams(chainIter, asset)
 
 			gas = gas + int64(executionGas)
-			totalMessageLength = totalMessageLength + commendLength + metadataLength
+			totalMessageLength = totalMessageLength + commendLength
 		}
 
 		outbounds = append(outbounds, connection.GringottsEstimateOutboundTransfer{
@@ -196,22 +192,22 @@ func estimateMarketplaceEVM(
 	}, nil
 }
 
-func GetExecutionParams(chain models.Blockchain, asset string) (uint64, uint16, uint16) {
+func GetExecutionParams(chain models.Blockchain, asset string) (uint64, uint16) {
 	token := models.GetToken(chain, asset)
 
 	if token.IsStableCoin {
 		switch chain {
 		case models.Solana, models.SolanaDev:
-			return 100_000, 0, 0
+			return 100_000, 0
 		default:
-			return 100_000, 0, 0
+			return 100_000, 0
 		}
 	}
 
 	switch chain {
 	case models.Solana, models.SolanaDev:
-		return 500_000, config.MaxCommandLength, config.MaxMetaDataLength
+		return 500_000, config.MaxCommandLength
 	default:
-		return 500_000, config.MaxCommandLength, 0
+		return 500_000, config.MaxCommandLength
 	}
 }

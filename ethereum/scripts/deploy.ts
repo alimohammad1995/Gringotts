@@ -7,8 +7,8 @@ import {bytesToHex} from "web3-utils"
 const ARB_EID = 40231;
 const SOL_EID = 40168;
 
-const Address = "0x1c191f62728b1498d779559e9ffb75a849582103";
-const SOL_PDA = "3xCFDu4wrca8Pxsc6H9Wz8ktKzECdaUPD75H77eLx81F"
+const Address = "0x0b481d55839b6118a917e89dd53eb35e5359fae9";
+const SOL_PDA = "HjVcDEcpjVvzwEnaHkZgdrV2pV2DoFcg7TyemtMovuZg"
 
 const TEST_STABLE = "0x301b022b40d06088fc974e767149f4a3feebbf1a";
 const SOL_USDC = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU";
@@ -20,7 +20,14 @@ async function deploy() {
     );
 
     console.log(gringotts.address);
-    return gringotts.address;
+    const [wallet] = await hre.viem.getWalletClients();
+
+    const tx = await wallet.sendTransaction({
+        to: gringotts.address,
+        value: BigInt(1e18 * 0.01),
+    });
+
+    console.log("Fund -> ", tx);
 }
 
 async function setDataFeed() {
@@ -53,23 +60,11 @@ async function setAgent() {
             endpoint: utils.hexZeroPad(bytesToHex(Array.from(decodedBytes)), 32) as `0x${string}`,
             chainID: 2,
             lzEID: SOL_EID,
-            stableCoins: [utils.hexZeroPad(bytesToHex(Array.from(stableCoin)), 32) as `0x${string}`],
-            baseGasEstimate: BigInt(30_000),
+            multiSend: true,
+            baseGasEstimate: BigInt(100_000),
         }
     ]);
     console.log(tx1);
-
-    // self
-    const tx2 = await gringotts.write.updateAgent([
-        1, {
-            endpoint: ethers.utils.hexZeroPad(Address, 32) as `0x${string}`,
-            chainID: 1,
-            lzEID: ARB_EID,
-            stableCoins: [ethers.utils.hexZeroPad(TEST_STABLE, 32) as `0x${string}`],
-            baseGasEstimate: BigInt(30_000),
-        }
-    ]);
-    console.log(tx2);
 }
 
 async function bridge() {
@@ -152,13 +147,52 @@ async function approve() {
     console.log('Transaction Hash:', hash);
 }
 
+async function test() {
+    const [wallet] = await hre.viem.getWalletClients();
+    const gringotts = await hre.viem.getContractAt("Gringotts", Address, {
+            client: {
+                wallet: wallet,
+            },
+        }
+    );
+
+    const x = await gringotts.write.testSend(
+        [
+            2,
+            2,
+            1,
+            "0x1245",
+            BigInt(400_000),
+            false
+        ]);
+    console.log(x)
+}
+
+async function widthdraw_token() {
+    const [wallet] = await hre.viem.getWalletClients();
+    const gringotts = await hre.viem.getContractAt("Gringotts", Address, {
+            client: {
+                wallet: wallet,
+            },
+        }
+    );
+
+    // const x = await gringotts.write.withdrawERC20(["0xaf88d065e77c8cc2239327c5edb3a432268e5831", BigInt(0)]);
+    // console.log(x)
+
+    const y = await gringotts.write.withdrawNative([BigInt(0)]);
+    console.log(y)
+}
+
+
 async function main() {
     // const address = await deploy();
     // await setDataFeed();
     // await setAgent();
-    await bridge();
-    // await test();
+    // await bridge();
+    await test();
     // await approve();
+    // await widthdraw_token()
 }
 
 main()

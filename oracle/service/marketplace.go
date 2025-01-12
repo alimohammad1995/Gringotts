@@ -28,13 +28,13 @@ func EstimateMarketplace(
 ) (*provider.Estimate, error) {
 	switch chain {
 	case models.Solana, models.SolanaDev:
-		return EstimateMarketplaceSolana(chain, dstItems, amount)
+		return estimateMarketplaceSolana(chain, dstItems, amount)
 	default:
 		return estimateMarketplaceEVM(chain, dstItems, amount)
 	}
 }
 
-func EstimateMarketplaceSolana(
+func estimateMarketplaceSolana(
 	chain models.Blockchain,
 	dstItems map[models.Blockchain][]string,
 	amount *uint256.Int,
@@ -124,8 +124,10 @@ func EstimateMarketplaceSolana(
 	}
 
 	return &provider.Estimate{
-		GasPriceUSD:   uint256.NewInt(response.TransferGasPriceUsdx),
-		CommissionUSD: uint256.NewInt(response.CommissionUsdx),
+		GasPriceUSDX:           uint256.NewInt(response.TransferGasPriceUsdx),
+		GasPriceDiscountUSDX:   uint256.NewInt(response.TransferGasDiscountUsdx),
+		CommissionUSDX:         uint256.NewInt(response.CommissionUsdx),
+		CommissionDiscountUSDX: uint256.NewInt(response.CommissionDiscountUsdx),
 	}, nil
 }
 
@@ -184,11 +186,15 @@ func estimateMarketplaceEVM(
 	}
 
 	gasPriceUSD, _ := uint256.FromBig(res.TransferGasUSDX)
-	CommissionUSD, _ := uint256.FromBig(res.CommissionUSDX)
+	gasPriceDiscountUSD, _ := uint256.FromBig(res.TransferGasDiscountUSDX)
+	commissionUSD, _ := uint256.FromBig(res.CommissionUSDX)
+	commissionDiscountUSD, _ := uint256.FromBig(res.CommissionDiscountUSDX)
 
 	return &provider.Estimate{
-		GasPriceUSD:   gasPriceUSD,
-		CommissionUSD: CommissionUSD,
+		GasPriceUSDX:           gasPriceUSD,
+		GasPriceDiscountUSDX:   gasPriceDiscountUSD,
+		CommissionUSDX:         commissionUSD,
+		CommissionDiscountUSDX: commissionDiscountUSD,
 	}, nil
 }
 

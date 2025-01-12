@@ -47,9 +47,10 @@ type Transaction struct {
 }
 
 type Estimate struct {
-	GasPrice      *uint256.Int
-	GasPriceUSD   *uint256.Int
-	CommissionUSD *uint256.Int
+	GasPriceUSDX           *uint256.Int
+	GasPriceDiscountUSDX   *uint256.Int
+	CommissionUSDX         *uint256.Int
+	CommissionDiscountUSDX *uint256.Int
 }
 
 type UnsignedTransaction struct {

@@ -9,6 +9,7 @@ import (
 	"gringotts/provider"
 	"gringotts/service"
 	"gringotts/utils"
+	"math"
 )
 
 type OutboundTransactionItemRequest struct {
@@ -89,28 +90,26 @@ func HandleTransaction(c *fiber.Ctx) error {
 	}
 
 	/* Estimate Calculation */
-	//dstMapping := make(map[models.Blockchain][]string)
-	//for chain, transactions := range request.DstItems {
-	//	dstMapping[chain] = make([]string, 0)
-	//	for _, transaction := range transactions {
-	//		dstMapping[chain] = append(dstMapping[chain], transaction.Token)
-	//	}
-	//}
-	//marketplace, err := service.EstimateMarketplace(sourceChain, dstMapping, uint256.NewInt(outAmountUSDX))
-	//if err != nil {
-	//	log.Errorw("Estimate error", "err", err)
-	//	return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
-	//}
-	//
-	//outAmountUSDX = outAmountUSDX - marketplace.GasPriceUSD.Uint64()
-	//outAmountUSDX = outAmountUSDX - marketplace.CommissionUSD.Uint64()
-	//outAmountUSDX = uint64(float64(outAmountUSDX) * config.ConversionFactor)
-	//
-	//marketplaceCommission := marketplace.CommissionUSD.Float64() / math.Pow10(config.ChainTransferDecimals)
-	//marketplaceGas := marketplace.GasPriceUSD.Float64() / math.Pow10(config.ChainTransferDecimals)
+	dstMapping := make(map[models.Blockchain][]string)
+	for chain, transactions := range request.DstItems {
+		dstMapping[chain] = make([]string, 0)
+		for _, transaction := range transactions {
+			dstMapping[chain] = append(dstMapping[chain], transaction.Token)
+		}
+	}
+	marketplace, err := service.EstimateMarketplace(sourceChain, dstMapping, uint256.NewInt(outAmountUSDX))
+	if err != nil {
+		log.Errorw("Estimate error", "err", err)
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request"})
+	}
 
-	marketplaceCommission := 0.0
-	marketplaceGas := 0.0
+	outAmountUSDX = outAmountUSDX - marketplace.GasPriceUSDX.Uint64() - marketplace.CommissionUSDX.Uint64()
+	outAmountUSDX = outAmountUSDX + marketplace.GasPriceDiscountUSDX.Uint64() + marketplace.CommissionDiscountUSDX.Uint64()
+
+	outAmountUSDX = uint64(float64(outAmountUSDX) * config.ConversionFactor)
+
+	marketplaceCommission := marketplace.CommissionUSDX.Float64() / math.Pow10(config.ChainTransferDecimals)
+	marketplaceGas := marketplace.GasPriceUSDX.Float64() / math.Pow10(config.ChainTransferDecimals)
 
 	/* Outbound transaction */
 	chainOutTransactions := make(map[models.Blockchain][]*models.Transaction)

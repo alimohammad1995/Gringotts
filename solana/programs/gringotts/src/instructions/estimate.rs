@@ -74,9 +74,7 @@ pub struct EstimateRequest {
 pub struct EstimateOutboundDetails {
     pub chain_id: u8,
     pub execution_gas: u64,
-    pub execution_gas_usdx: u64,
     pub transfer_gas: u64,
-    pub transfer_gas_usdx: u64,
 }
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]

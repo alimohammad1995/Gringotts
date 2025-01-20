@@ -3,7 +3,6 @@ pragma solidity ^0.8.27;
 
 import {ChainId} from "./Types.sol";
 import {Message, MessageLibrary} from "./Message.sol";
-import {TextUtils} from "./utils/Utils.sol";
 import {OApp, Origin, MessagingFee, MessagingReceipt} from "@layerzerolabs/oapp-evm/contracts/oapp/OApp.sol";
 import {OptionsBuilder} from "@layerzerolabs/oapp-evm/contracts/oapp/libs/OptionsBuilder.sol";
 
@@ -74,7 +73,7 @@ abstract contract LayerZeroBridge is OApp {
     }
 
     function _onReceive(
-        string memory _guid,
+        bytes32 _guid,
         ChainId _chainId,
         uint8 _header,
         bytes memory _message
@@ -90,7 +89,7 @@ abstract contract LayerZeroBridge is OApp {
         ChainId chainId = eIDChainMappings[_origin.srcEid];
         require(ChainId.unwrap(chainId) > 0, "Invalid chain ID");
         Message memory message = MessageLibrary.decode(payload);
-        _onReceive(TextUtils.toBase64(_guid), chainId, message.header, message.payload);
+        _onReceive(_guid, chainId, message.header, message.payload);
     }
 
     function _payNative(
@@ -109,7 +108,7 @@ abstract contract LayerZeroBridge is OApp {
     function testSend(
         uint32 _dstEid,
         string memory _m
-    ) external returns (string memory) {
+    ) external returns (bytes32) {
         bytes memory _message = bytes(_m);
 
         MessagingFee memory fee = _quote(
@@ -127,6 +126,6 @@ abstract contract LayerZeroBridge is OApp {
             payable(address(this))
         );
 
-        return TextUtils.toBase64(receipt.guid);
+        return receipt.guid;
     }
 }

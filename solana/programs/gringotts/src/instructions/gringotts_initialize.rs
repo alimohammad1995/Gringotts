@@ -47,7 +47,6 @@ impl GringottsInitialize<'_> {
         gringotts.owner = user.key();
         gringotts.bump = ctx.bumps.gringotts;
         gringotts.chain_id = params.chain_id;
-        gringotts.lz_eid = params.lz_eid;
         gringotts.lz_endpoint_program = params.lz_endpoint_program;
         gringotts.pyth_price_feed_id = get_feed_id_from_hex(&params.pyth_price_feed_id)?;
         gringotts.commission_micro_bps = params.commission_micro_bps;
@@ -84,7 +83,6 @@ impl GringottsInitialize<'_> {
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct GringottsInitializeParams {
     pub chain_id: u8,
-    pub lz_eid: u32,
     pub lz_endpoint_program: Pubkey,
     pub pyth_price_feed_id: String,
     pub vault_fund: u64,

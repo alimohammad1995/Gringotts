@@ -332,13 +332,13 @@ async function main() {
 
     // await createAddressLookup();
     // await bridge(ARB_EID);
-    await widthdraw_token();
+    // await widthdraw_token();
     // await lzReceive();
 
     // console.log(
     //     "Value", JSON.stringify(await program.account.lzReceiveTypesAccounts.fetch(lzReceiveTypesPDA))
     // );
-    await close("HjVcDEcpjVvzwEnaHkZgdrV2pV2DoFcg7TyemtMovuZg");
+    // await close("HjVcDEcpjVvzwEnaHkZgdrV2pV2DoFcg7TyemtMovuZg");
 }
 
 main()

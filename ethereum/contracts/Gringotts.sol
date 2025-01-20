@@ -8,7 +8,7 @@ import {Config, ConfigLibrary, GringottsAddress, ChainId} from "./Types.sol";
 import {Peer} from "./Peer.sol";
 import {Market} from "./Market.sol";
 import {Vault} from "./Vault.sol";
-import {AddressUtils, MathUtils, TextUtils} from "./utils/Utils.sol";
+import {AddressUtils, MathUtils, IdUtils} from "./utils/Utils.sol";
 import {LayerZeroBridge} from "./LayerZeroMessenger.sol";
 import {SendChainTransferEvent, ReceiveChainTransferEvent} from "./Events.sol";
 
@@ -22,10 +22,10 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausable {
     uint8 private constant CHAIN_TRANSFER_DECIMALS = 6;
     uint8 private constant MAX_TRANSFER = 8;
-    uint private constant MULTI_SEND_GAS_INCREASE = 50;
 
     ChainId private chainId;
     Config private config;
+    uint64 private txCount;
     mapping(ChainId => Peer) private gringottsAgents;
 
     constructor(
@@ -154,6 +154,7 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
         EstimateOutboundDetails[] memory outboundMetaData = estimateResult.outboundDetails;
 
         /*********** [Send transfers] ***********/
+        uint64 id = IdUtils.generateId(chainId, txCount++);
         bytes32[] memory messageIds = new bytes32[](_params.outbounds.length);
 
         for (uint256 i = 0; i < _params.outbounds.length; i++) {
@@ -215,9 +216,10 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
             }
 
             emit SendChainTransferEvent(
+                id,
                 msg.sender,
                 bridgeOutbound.chainId,
-                TextUtils.toBase64(messageIds[i]),
+                messageIds[i],
                 chainTotalAmountUSDX
             );
         }
@@ -382,7 +384,7 @@ contract Gringotts is Ownable, Blockable, LayerZeroBridge, Vault, Market, Pausab
     }
 
     function _onReceive(
-        string memory _guid,
+        bytes32 _guid,
         ChainId _chainId,
         uint8 _header,
         bytes memory _message

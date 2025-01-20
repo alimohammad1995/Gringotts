@@ -1,6 +1,6 @@
 use crate::constants::CHAIN_TRANSFER_DECIMALS;
 use crate::msg_codec::{ChainTransfer, ChainTransferItem, Message, CHAIN_TRANSFER_TYPE};
-use crate::state::{Gringotts, Peer};
+use crate::state::{Gringotts, Peer, SendChainTransferEvent};
 use crate::utils::{bps, change_decimals, OptionsBuilder};
 use crate::*;
 use anchor_lang::context::Context;
@@ -22,7 +22,7 @@ pub struct Bridge<'info> {
 
     pub price_feed: Account<'info, PriceUpdateV2>,
 
-    #[account(seeds = [GRINGOTTS_SEED], bump = gringotts.bump)]
+    #[account(mut, seeds = [GRINGOTTS_SEED], bump = gringotts.bump)]
     pub gringotts: Account<'info, Gringotts>,
 
     #[account(mut, seeds = [VAULT_SEED], bump)]
@@ -210,14 +210,17 @@ impl<'info> Bridge<'info> {
 
         /*********** [Send transfers] ***********/
         let mut message_ids = Vec::with_capacity(params.outbounds.len());
+        let id = gringotts.generate_id();
         let vault_seeds: &[&[u8]] = &[VAULT_SEED, &[vault_bump]];
         let gringotts_seeds: &[&[u8]] = &[GRINGOTTS_SEED, &[gringotts.bump]];
 
         for i in 0..params.outbounds.len() {
             let mut chain_transfers = Vec::with_capacity(params.outbounds[i].items.len());
+            let mut chain_total_amount_usdx = 0;
 
             for j in 0..params.outbounds[i].items.len() {
                 let amount_usdx = bps(net_usdx, params.outbounds[i].items[j].distribution_bp as u32);
+                chain_total_amount_usdx += amount_usdx;
 
                 chain_transfers.push(ChainTransferItem {
                     amount_usdx: amount_usdx,
@@ -261,14 +264,19 @@ impl<'info> Bridge<'info> {
                 send_params,
             )?;
 
-            message_ids.push(
-                send_response
-                    .guid
-                    .iter()
-                    .map(|byte| format!("{:02x}", byte))
-                    .collect::<String>(),
-            );
+            message_ids.push(send_response.guid);
+
+            emit!(SendChainTransferEvent {
+                id: id,
+                sender: signer.key(),
+                chain_id: peers[i].chain_id,
+                message_id: send_response.guid,
+                amount_usdx: chain_total_amount_usdx,
+            });
         }
+
+        let gringotts_mut = &mut ctx.accounts.gringotts;
+        gringotts_mut.tx_count += 1;
 
         Ok(BridgeResponse {
             message_ids: message_ids,
@@ -377,7 +385,7 @@ pub struct BridgeRequest {
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct BridgeResponse {
-    pub message_ids: Vec<String>,
+    pub message_ids: Vec<[u8; 32]>,
 }
 
 #[error_code]

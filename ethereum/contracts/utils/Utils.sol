@@ -3,20 +3,22 @@ pragma solidity ^0.8.10;
 
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
-import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
-import {GringottsAddress} from "../Types.sol";
+import {ChainId, GringottsAddress} from "../Types.sol";
+
+library IdUtils {
+    function generateId(ChainId _chainId, uint64 _txCount) internal pure returns (uint64) {
+        require(_txCount <= 0xFFFFFFFFFFFFFF, "Transaction count exceeds 7 bytes");
+
+        uint64 chainId = uint64(ChainId.unwrap(_chainId));
+        return (chainId << 56) | _txCount;
+    }
+}
 
 library AddressUtils {
     function bytes32ToAddress(GringottsAddress _inAddress) internal pure returns (address) {
         bytes32 _address = GringottsAddress.unwrap(_inAddress);
         require(uint256(_address) >> 160 == 0, "Invalid bytes32 for address");
         return address(uint160(uint256(_address)));
-    }
-}
-
-library TextUtils {
-    function toBase64(bytes32 data) internal pure returns (string memory) {
-        return Base64.encode(abi.encodePacked(data));
     }
 }
 

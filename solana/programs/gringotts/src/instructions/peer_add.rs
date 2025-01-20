@@ -24,11 +24,11 @@ impl PeerAdd<'_> {
         let peer = &mut ctx.accounts.peer;
         peer.bump = ctx.bumps.peer;
 
-        peer.chain_id = params.chain_id;
         peer.lz_eid = params.lz_eid;
+
+        peer.chain_id = params.chain_id;
         peer.multi_send = params.multi_send;
         peer.address = params.address;
-
         peer.base_gas_estimate = params.base_gas_estimate;
 
         Ok(())
@@ -37,8 +37,8 @@ impl PeerAdd<'_> {
 
 #[derive(Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct PeerAddParams {
-    pub chain_id: u8,
     pub lz_eid: u32,
+    pub chain_id: u8,
     pub address: [u8; 32],
     pub multi_send: bool,
     pub base_gas_estimate: u64,

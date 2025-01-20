@@ -17,6 +17,9 @@ impl PeerUpdate<'_> {
     pub fn apply(ctx: Context<PeerUpdate>, params: &PeerUpdateParams) -> Result<()> {
         let peer = &mut ctx.accounts.peer;
 
+        if let Some(chain_id) = params.chain_id {
+            peer.chain_id = chain_id;
+        }
         if let Some(address) = params.address {
             peer.address = address;
         }
@@ -34,6 +37,7 @@ impl PeerUpdate<'_> {
 #[derive(Debug, Clone, AnchorSerialize, AnchorDeserialize)]
 pub struct PeerUpdateParams {
     pub lz_eid: u32,
+    pub chain_id: Option<u8>,
     pub address: Option<[u8; 32]>,
     pub multi_send: Option<bool>,
     pub base_gas_estimate: Option<u64>,

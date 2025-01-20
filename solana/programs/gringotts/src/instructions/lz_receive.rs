@@ -1,6 +1,6 @@
 use crate::constants::{CHAIN_TRANSFER_DECIMALS, NATIVE_MINT};
 use crate::msg_codec::{ChainTransfer, Message, SolanaTransfer, CHAIN_COMPLETION_TYPE, CHAIN_REGISTER_ORDER_TYPE, CHAIN_TRANSFER_TYPE};
-use crate::state::{Gringotts, LzReceiveTypesAccounts, Order, OrderState};
+use crate::state::{Gringotts, LzReceiveTypesAccounts, Order, OrderState, ReceiveChainTransferEvent};
 use crate::utils::change_decimals;
 use crate::*;
 use anchor_lang::system_program;
@@ -157,6 +157,14 @@ impl<'info> LzReceive<'info> {
                         )?;
                     }
                 }
+
+                emit!(ReceiveChainTransferEvent {
+                    chain_id_lz: params.src_eid,
+                    message_id: params.guid,
+                    asset: desired_token_mint_account.key(),
+                    recipient: recipient.key(),
+                    amount_usdx: chain_item.amount_usdx,
+                });
             }
         } else if message.header == CHAIN_COMPLETION_TYPE {
             let order = &Account::<Order>::try_from(&ctx.remaining_accounts[0])?;

@@ -8,7 +8,6 @@ pub struct Gringotts {
     pub bump: u8,
     pub chain_id: u8,
 
-    pub lz_eid: u32,
     pub lz_endpoint_program: Pubkey,
 
     pub pyth_price_feed_id: [u8; 32],
@@ -19,11 +18,17 @@ pub struct Gringotts {
     pub commission_micro_bps: u32,
     pub commission_discount_bps: u32,
     pub gas_discount_bps: u32,
+
+    pub tx_count: u64,
 }
 
 impl Gringotts {
     pub fn has_stable_coin(&self, stable_coin: [u8; 32]) -> bool {
         self.stable_coins.iter().any(|&coin| coin == stable_coin)
+    }
+
+    pub fn generate_id(&self) -> u64 {
+        ((self.chain_id as u64) << 56) | self.tx_count
     }
 }
 

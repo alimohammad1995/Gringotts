@@ -19,7 +19,7 @@ type OpenOcean struct {
 
 // https://open-api.openocean.finance/v3/eth/swap_quote?gasPrice=3&inTokenAddress=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48&outTokenAddress=0xEeeeeEeeeEeEeeEeEeeeeEEEeeeeEeeeeeeeEEeE&amount=500&slippage=1&account=0x929B44e589AC4dD99c0282614e9a844Ea9483aaa&sender=0x0D595AE2666a2c5Ae6b99cce4DD428a9Cf20B2c9
 
-func (o *OpenOcean) GetSwap(params *SwapParams) (*Swap, error) {
+func (o *OpenOcean) GetSwap(params *models.SwapParams) (*models.Swap, error) {
 	if params.FromToken == nil || params.ToToken == nil {
 		return nil, errors.New("invalid token")
 	}
@@ -35,15 +35,15 @@ func (o *OpenOcean) GetSwap(params *SwapParams) (*Swap, error) {
 	outAmount, _ := strconv.ParseFloat(data["outAmount"].(string), 64)
 	minOutAmount, _ := strconv.ParseFloat(data["minOutAmount"].(string), 64)
 
-	return &Swap{
-		ExecutorAddress: data["to"].(string),
-		Command:         data["data"].(string),
-		OutAmount:       uint256.NewInt(uint64(outAmount)),
-		MinOutAmount:    uint256.NewInt(uint64(minOutAmount)),
+	return &models.Swap{
+		Executor:     data["to"].(string),
+		Command:      data["data"].(string),
+		OutAmount:    uint256.NewInt(uint64(outAmount)),
+		MinOutAmount: uint256.NewInt(uint64(minOutAmount)),
 	}, nil
 }
 
-func (o *OpenOcean) fetchOpenOceanSwap(params *SwapParams) map[string]interface{} {
+func (o *OpenOcean) fetchOpenOceanSwap(params *models.SwapParams) map[string]interface{} {
 	from := params.FromToken.Address
 	to := params.ToToken.Address
 

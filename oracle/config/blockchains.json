@@ -3,7 +3,8 @@
     "id": 100,
     "lz_eid": 1,
     "endpoint": "https://arbitrum-sepolia.infura.io/v3/463ba1f0f1c34f1da7403e6f4e81ebef",
-    "logo": "https://cryptologos.cc/logos/ethereum-eth-logo.png"
+    "logo": "https://cryptologos.cc/logos/ethereum-eth-logo.png",
+    "contract": "0x1d5B493882BDDe19D082426bF32aE3918Cb36916"
   },
   "solana": {
     "id": 2,

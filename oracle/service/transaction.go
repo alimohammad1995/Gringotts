@@ -9,21 +9,20 @@ import (
 	"gringotts/utils"
 )
 
-func InboundTransaction(
-	chain models.Blockchain,
-	tokenAddress string,
-	amount *uint256.Int,
-	slippageBPS int,
-) (*provider.Transaction, error) {
-	token := models.GetToken(chain, tokenAddress)
+func InboundTransaction(chain models.Blockchain, item *models.Inbound) error {
+	swap, err := InboundTransactionSwap(chain, item.Token, item.Amount, item.SlippageBPS)
 
+	if err != nil {
+		return err
+	}
+
+	item.Swap = swap
+	return nil
+}
+
+func InboundTransactionSwap(chain models.Blockchain, token *models.Token, amount *uint256.Int, slippageBPS int) (*models.Swap, error) {
 	if token.IsStableCoin {
-		return &provider.Transaction{
-			FromToken:    token,
-			ToToken:      token,
-			OutAmount:    amount,
-			MinOutAmount: amount,
-		}, nil
+		return nil, nil
 	}
 
 	var dex provider.Provider
@@ -39,7 +38,7 @@ func InboundTransaction(
 
 	stableCoin := models.GetDefaultStableCoins(chain)
 
-	params := &provider.SwapParams{
+	params := &models.SwapParams{
 		Chain:       chain,
 		Amount:      amount,
 		Recipient:   chain.GetContract(),
@@ -56,32 +55,32 @@ func InboundTransaction(
 		return nil, errors.New("swap command too long")
 	}
 
-	return &provider.Transaction{
-		FromToken:    token,
-		ToToken:      stableCoin,
-		OutAmount:    swap.OutAmount,
-		MinOutAmount: swap.MinOutAmount,
-		Swap:         swap,
-	}, nil
+	swap.FromToken = token
+	swap.ToToken = stableCoin
+
+	return swap, nil
 }
 
-func OutboundTransaction(
+func OutboundTransaction(chain models.Blockchain, item *models.Outbound) error {
+	swap, err := OutboundTransactionSwap(chain, item.Recipient, item.Token, item.Amount, item.SlippageBPS)
+
+	if err != nil {
+		return err
+	}
+
+	item.Swap = swap
+	return nil
+}
+
+func OutboundTransactionSwap(
 	chain models.Blockchain,
 	recipient string,
-	tokenAddress string,
+	token *models.Token,
 	amount *uint256.Int,
 	slippageBPS int,
-) (*provider.Transaction, error) {
-	desiredToken := models.GetToken(chain, tokenAddress)
-
-	if desiredToken.IsStableCoin {
-		return &provider.Transaction{
-			FromToken:    desiredToken,
-			ToToken:      desiredToken,
-			Recipient:    recipient,
-			OutAmount:    utils.MoveDecimals(amount, config.ChainTransferDecimals, desiredToken.Decimals),
-			MinOutAmount: utils.MoveDecimals(amount, config.ChainTransferDecimals, desiredToken.Decimals),
-		}, nil
+) (*models.Swap, error) {
+	if token.IsStableCoin {
+		return nil, nil
 	}
 
 	var dex provider.Provider
@@ -97,16 +96,16 @@ func OutboundTransaction(
 	stableCoin := models.GetDefaultStableCoins(chain)
 	stableCoinAmount := utils.MoveDecimals(amount, config.ChainTransferDecimals, stableCoin.Decimals)
 
-	params := &provider.SwapParams{
+	params := &models.SwapParams{
 		Chain:       chain,
 		Amount:      stableCoinAmount,
 		Recipient:   recipient,
 		SlippageBPS: slippageBPS,
 		FromToken:   stableCoin,
-		ToToken:     desiredToken,
+		ToToken:     token,
 	}
 
-	if (chain == models.Solana || chain == models.SolanaDev) && len(desiredToken.Address) == 0 {
+	if chain.IsSolana() && token.IsNative {
 		params.Recipient = models.GetGringotts(chain)
 	}
 
@@ -118,12 +117,8 @@ func OutboundTransaction(
 		return nil, errors.New("dex command too long")
 	}
 
-	return &provider.Transaction{
-		FromToken:    stableCoin,
-		ToToken:      desiredToken,
-		Recipient:    recipient,
-		OutAmount:    swap.OutAmount,
-		MinOutAmount: swap.MinOutAmount,
-		Swap:         swap,
-	}, nil
+	swap.FromToken = stableCoin
+	swap.ToToken = token
+
+	return swap, nil
 }

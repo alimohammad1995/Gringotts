@@ -112,3 +112,7 @@ func (b Blockchain) GetLzEId() uint32 {
 func (b Blockchain) GetContract() string {
 	return blockchains[b].Contract
 }
+
+func (b Blockchain) IsSolana() bool {
+	return b == Solana || b == SolanaDev
+}

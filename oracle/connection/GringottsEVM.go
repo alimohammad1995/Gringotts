@@ -163,7 +163,7 @@ type GringottsEVMFilterer struct {
 type GringottsEVMSession struct {
 	Contract     *GringottsEVM     // Generic contract binding to set the session for
 	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+	TransactOpts bind.TransactOpts // Swap auth options to use throughout this session
 }
 
 // GringottsEVMCallerSession is an auto generated read-only Go binding around an Ethereum contract,
@@ -177,7 +177,7 @@ type GringottsEVMCallerSession struct {
 // with pre-set transact options.
 type GringottsEVMTransactorSession struct {
 	Contract     *GringottsEVMTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts       // Transaction auth options to use throughout this session
+	TransactOpts bind.TransactOpts       // Swap auth options to use throughout this session
 }
 
 // GringottsEVMRaw is an auto generated low-level Go binding around an Ethereum contract.

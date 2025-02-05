@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"github.com/go-resty/resty/v2"
 	"github.com/holiman/uint256"
+	"gringotts/models"
 	"gringotts/utils"
 	"strconv"
 )
@@ -15,7 +16,7 @@ type Jupiter struct {
 
 // https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000000&slippageBps=100&restrictIntermediateTokens=true
 
-func (o *Jupiter) GetSwap(params *SwapParams) (*Swap, error) {
+func (o *Jupiter) GetSwap(params *models.SwapParams) (*models.Swap, error) {
 	quoteRes := o.quote(
 		params.FromToken.Address,
 		params.ToToken.Address,
@@ -27,7 +28,7 @@ func (o *Jupiter) GetSwap(params *SwapParams) (*Swap, error) {
 
 	swapInstruction := swapRes["swapInstruction"].(map[string]interface{})
 
-	swapAccounts := swapInstruction["accounts"].([]interface{})
+	accounts := o.extractAccounts(swapInstruction["accounts"].([]interface{}))
 	swapCommand, _ := base64.StdEncoding.DecodeString(swapInstruction["data"].(string))
 
 	outAmount, _ := strconv.ParseFloat(quoteRes["outAmount"].(string), 64)
@@ -38,30 +39,26 @@ func (o *Jupiter) GetSwap(params *SwapParams) (*Swap, error) {
 		alts = append(alts, alt.(string))
 	}
 
-	accounts, metadata := o.createMeta(swapAccounts)
-
-	return &Swap{
-		ExecutorAddress: JupiterAddress,
-		Command:         utils.ToHex(swapCommand),
-		Metadata:        utils.ToHex(metadata),
-		OutAmount:       uint256.NewInt(uint64(outAmount)),
-		MinOutAmount:    uint256.NewInt(uint64(outAmountMin)),
-		AddressLookup:   alts,
-		Accounts:        accounts,
+	return &models.Swap{
+		Executor:      JupiterAddress,
+		Command:       utils.ToHex(swapCommand),
+		OutAmount:     uint256.NewInt(uint64(outAmount)),
+		MinOutAmount:  uint256.NewInt(uint64(outAmountMin)),
+		AddressLookup: alts,
+		Accounts:      accounts,
 	}, nil
 }
 
-func (o *Jupiter) createMeta(swapAccounts []interface{}) ([]Account, []byte) {
-	metadata := []byte{byte(len(swapAccounts))}
-	var accounts []Account
+func (o *Jupiter) extractAccounts(swapAccounts []interface{}) []*models.Account {
+	var accounts []*models.Account
 
 	for _, swapAccount := range swapAccounts {
 		pubkey := swapAccount.(map[string]interface{})["pubkey"].(string)
 		isWriteable := swapAccount.(map[string]interface{})["isWritable"].(bool)
-		accounts = append(accounts, Account{Address: pubkey, IsSigner: false, IsWriteable: isWriteable})
+		accounts = append(accounts, &models.Account{Address: pubkey, IsSigner: false, IsWritable: isWriteable})
 	}
 
-	return accounts, metadata
+	return accounts
 }
 
 func (o *Jupiter) swap(quoteResponse map[string]interface{}, recipient string) map[string]interface{} {

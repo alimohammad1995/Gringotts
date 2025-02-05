@@ -18,44 +18,51 @@ import (
 	"gringotts/config"
 	"gringotts/connection"
 	"gringotts/models"
-	"gringotts/provider"
 )
 
 func EstimateMarketplace(
-	chain models.Blockchain,
-	dstItems map[models.Blockchain][]string,
+	servingContext *models.ServingContext,
 	amount *uint256.Int,
-) (*provider.Estimate, error) {
-	switch chain {
+) error {
+	var res *models.Marketplace
+	var err error
+
+	switch servingContext.SourceChain {
 	case models.Solana, models.SolanaDev:
-		return estimateMarketplaceSolana(chain, dstItems, amount)
+		res, err = EstimateMarketplaceSolana(servingContext, amount)
 	default:
-		return estimateMarketplaceEVM(chain, dstItems, amount)
+		res, err = EstimateMarketplaceEVM(servingContext, amount)
 	}
+
+	if err != nil {
+		return err
+	}
+
+	servingContext.Marketplace = res
+	return nil
 }
 
-func estimateMarketplaceSolana(
-	chain models.Blockchain,
-	dstItems map[models.Blockchain][]string,
+func EstimateMarketplaceSolana(
+	servingContext *models.ServingContext,
 	amount *uint256.Int,
-) (*provider.Estimate, error) {
+) (*models.Marketplace, error) {
 	inbound := connection.EstimateInboundTransfer{
 		AmountUsdx: amount.Uint64(),
 	}
-	outbounds := make([]connection.EstimateOutboundTransfer, 0, len(dstItems))
-	for chainIter, assets := range dstItems {
+	outbounds := make([]connection.EstimateOutboundTransfer, 0, len(servingContext.Outbounds))
+	for chain, items := range servingContext.Outbounds {
 		gas := uint64(0)
 		totalMessageLength := uint16(0)
 
-		for _, asset := range assets {
-			executionGas, commendLength := GetExecutionParams(chainIter, asset)
+		for _, item := range items {
+			executionGas, commendLength := GetExecutionParams(chain, item.Token)
 
 			gas = gas + executionGas
 			totalMessageLength = totalMessageLength + commendLength
 		}
 
 		outbounds = append(outbounds, connection.EstimateOutboundTransfer{
-			ChainId:       chainIter.GetId(),
+			ChainId:       chain.GetId(),
 			ExecutionGas:  gas,
 			MessageLength: totalMessageLength,
 		})
@@ -69,24 +76,24 @@ func estimateMarketplaceSolana(
 
 	accounts := []types.AccountMeta{
 		{PubKey: solana.PublicKeyFromString(models.GetPriceFeed()), IsSigner: false, IsWritable: false},
-		{PubKey: solana.PublicKeyFromString(models.GetGringotts(chain)), IsSigner: false, IsWritable: false},
+		{PubKey: solana.PublicKeyFromString(models.GetGringotts(servingContext.SourceChain)), IsSigner: false, IsWritable: false},
 	}
-	for chainIter := range dstItems {
+	for chain := range servingContext.Outbounds {
 		accounts = append(accounts, types.AccountMeta{
-			PubKey: solana.PublicKeyFromString(models.GetPeer(chain, chainIter)), IsSigner: false, IsWritable: false,
+			PubKey: solana.PublicKeyFromString(models.GetPeer(servingContext.SourceChain, chain)), IsSigner: false, IsWritable: false,
 		})
 	}
-	for chainIter := range dstItems {
-		accounts = append(accounts, getEstimateAccounts(chainIter)...)
+	for chain := range servingContext.Outbounds {
+		accounts = append(accounts, getEstimateAccounts(chain)...)
 	}
 
 	instruction := types.Instruction{
-		ProgramID: solana.PublicKeyFromString(chain.GetContract()),
+		ProgramID: solana.PublicKeyFromString(servingContext.SourceChain.GetContract()),
 		Accounts:  accounts,
 		Data:      data,
 	}
 
-	client := solana_client.NewClient(chain.GetEndpoint())
+	client := solana_client.NewClient(servingContext.SourceChain.GetEndpoint())
 	recentBlockhash, _ := client.GetLatestBlockhash(context.Background())
 
 	signer, _ := types.AccountFromBase58(models.GetSigner())
@@ -108,7 +115,7 @@ func estimateMarketplaceSolana(
 		return nil, err
 	}
 
-	programResult := fmt.Sprintf("Program return: %s ", chain.GetContract())
+	programResult := fmt.Sprintf("Program return: %s ", servingContext.SourceChain.GetContract())
 	var output string
 	for _, log := range simResult.Logs {
 		if strings.HasPrefix(log, programResult) {
@@ -123,7 +130,7 @@ func estimateMarketplaceSolana(
 		return nil, err
 	}
 
-	return &provider.Estimate{
+	return &models.Marketplace{
 		GasPriceUSDX:           uint256.NewInt(response.TransferGasPriceUsdx),
 		GasPriceDiscountUSDX:   uint256.NewInt(response.TransferGasDiscountUsdx),
 		CommissionUSDX:         uint256.NewInt(response.CommissionUsdx),
@@ -146,32 +153,31 @@ func getEstimateAccounts(chain models.Blockchain) []types.AccountMeta {
 	return res
 }
 
-func estimateMarketplaceEVM(
-	chain models.Blockchain,
-	dstItems map[models.Blockchain][]string,
+func EstimateMarketplaceEVM(
+	servingContext *models.ServingContext,
 	amount *uint256.Int,
-) (*provider.Estimate, error) {
-	client, _ := blockchain.GetConnection(chain)
-	instance, _ := connection.NewGringottsEVMCaller(common.HexToAddress(chain.GetContract()), client)
+) (*models.Marketplace, error) {
+	client, _ := blockchain.GetConnection(servingContext.SourceChain)
+	instance, _ := connection.NewGringottsEVMCaller(common.HexToAddress(servingContext.SourceChain.GetContract()), client)
 
 	inbound := connection.GringottsEstimateInboundTransfer{
 		AmountUSDX: amount.ToBig(),
 	}
 
-	outbounds := make([]connection.GringottsEstimateOutboundTransfer, 0, len(dstItems))
-	for chainIter, assets := range dstItems {
+	outbounds := make([]connection.GringottsEstimateOutboundTransfer, 0, len(servingContext.Outbounds))
+	for chain, items := range servingContext.Outbounds {
 		gas := int64(0)
 		totalMessageLength := uint16(0)
 
-		for _, asset := range assets {
-			executionGas, commendLength := GetExecutionParams(chainIter, asset)
+		for _, item := range items {
+			executionGas, commendLength := GetExecutionParams(chain, item.Token)
 
 			gas = gas + int64(executionGas)
 			totalMessageLength = totalMessageLength + commendLength
 		}
 
 		outbounds = append(outbounds, connection.GringottsEstimateOutboundTransfer{
-			ChainId:       chainIter.GetId(),
+			ChainId:       chain.GetId(),
 			MessageLength: totalMessageLength,
 			ExecutionGas:  big.NewInt(gas),
 		})
@@ -190,7 +196,7 @@ func estimateMarketplaceEVM(
 	commissionUSD, _ := uint256.FromBig(res.CommissionUSDX)
 	commissionDiscountUSD, _ := uint256.FromBig(res.CommissionDiscountUSDX)
 
-	return &provider.Estimate{
+	return &models.Marketplace{
 		GasPriceUSDX:           gasPriceUSD,
 		GasPriceDiscountUSDX:   gasPriceDiscountUSD,
 		CommissionUSDX:         commissionUSD,
@@ -198,9 +204,8 @@ func estimateMarketplaceEVM(
 	}, nil
 }
 
-func GetExecutionParams(chain models.Blockchain, asset string) (uint64, uint16) {
-	token := models.GetToken(chain, asset)
-
+// GetExecutionParams returns gas, message length
+func GetExecutionParams(chain models.Blockchain, token *models.Token) (uint64, uint16) {
 	if token.IsStableCoin {
 		switch chain {
 		case models.Solana, models.SolanaDev:

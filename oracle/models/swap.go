@@ -1,38 +1,43 @@
 package models
 
-import (
-	"github.com/holiman/uint256"
-)
+import "github.com/holiman/uint256"
+
+type SwapParams struct {
+	Chain       Blockchain
+	FromToken   *Token
+	ToToken     *Token
+	Amount      *uint256.Int
+	Recipient   string
+	SlippageBPS int
+}
+
+type Account struct {
+	Address    string
+	IsSigner   bool
+	IsWritable bool
+}
 
 type Swap struct {
-	Executor      string    `json:"executor"`
-	Command       string    `json:"command"`
-	Accounts      []Account `json:"accounts"`
-	AddressLookup []string  `json:"addressLookup"`
-}
+	Executor      string
+	Command       string
+	Accounts      []*Account
+	AddressLookup []string
 
-type Transaction struct {
-	FromToken string `json:"from_token"`
-	ToToken   string `json:"to_token"`
+	OutAmount    *uint256.Int
+	MinOutAmount *uint256.Int
 
-	SrcAmount string `json:"src_amount"`
-
-	Recipient       string `json:"recipient"`
-	DistributionBPS int    `json:"distribution_bps"`
-
-	OutAmount    *uint256.Int `json:"out_amount"`
-	MinOutAmount *uint256.Int `json:"min_out_amount"`
-
-	Swap *Swap `json:"swap"`
-}
-
-type Marketplace struct {
-	Commission  float64 `json:"commission_usd"`
-	GasPriceUSD float64 `json:"gas_price_usd"`
+	FromToken *Token
+	ToToken   *Token
 }
 
 type UnsignedTransaction struct {
-	Contract string `json:"contract"`
-	Data     []byte `json:"data"`
-	Value    string `json:"value"`
+	Data  []byte
+	Value *uint256.Int
+}
+
+type Marketplace struct {
+	GasPriceUSDX           *uint256.Int
+	GasPriceDiscountUSDX   *uint256.Int
+	CommissionUSDX         *uint256.Int
+	CommissionDiscountUSDX *uint256.Int
 }

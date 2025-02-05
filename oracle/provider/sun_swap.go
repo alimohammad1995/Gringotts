@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/go-resty/resty/v2"
 
+	"gringotts/models"
 	"gringotts/utils"
 )
 
@@ -21,7 +22,7 @@ type SunSwap struct {
 
 // https://rot.endjgfsv.link/swap/router?fromToken=T9yD14Nj9j7xAB4dbGeiX9h8unkKHxuWwb&toToken=TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t&amountIn=1000000
 
-func (o *SunSwap) GetSwap(params *SwapParams) (*Swap, error) {
+func (o *SunSwap) GetSwap(params *models.SwapParams) (*models.Swap, error) {
 	res := o.fetchSunSwap(params.FromToken.Address, params.ToToken.Address, params.Amount)
 
 	suggestedRoute := res["data"].([]interface{})
@@ -86,11 +87,11 @@ func (o *SunSwap) GetSwap(params *SwapParams) (*Swap, error) {
 
 	contractAddress, _ := utils.TronAddressToHex(SunSwapAddress)
 
-	return &Swap{
-		ExecutorAddress: contractAddress,
-		Command:         utils.ToHex(data),
-		OutAmount:       outAmount,
-		MinOutAmount:    minAmountOut,
+	return &models.Swap{
+		Executor:     contractAddress,
+		Command:      utils.ToHex(data),
+		OutAmount:    outAmount,
+		MinOutAmount: minAmountOut,
 	}, nil
 }
 

@@ -14,13 +14,6 @@ const GringottsSeed = "Gringotts"
 const VaultSeed = "Vault"
 const PeerSeed = "Peer"
 
-type Account struct {
-	Address    string `json:"address"`
-	IsWritable bool   `json:"is_writable"`
-	IsSigner   bool   `json:"is_signer"`
-	Index      int    `json:"index"`
-}
-
 type AccountModel struct {
 	EstimateDiscriminator []byte                    `json:"estimate_discriminator"`
 	QuoteAccounts         map[Blockchain][]*Account `json:"quote_accounts"`

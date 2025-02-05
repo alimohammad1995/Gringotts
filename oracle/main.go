@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/joho/godotenv"
+	"github.com/spf13/viper"
 	"gringotts/models"
 	"log"
-
-	"github.com/gofiber/fiber/v2"
-	"github.com/spf13/viper"
 )
 
 func main() {
@@ -24,8 +24,11 @@ func main() {
 	}
 
 	app := fiber.New()
+	app.Use(cors.New())
+
 	registerRoutes(app)
-	if err := app.Listen(":3000"); err != nil {
+
+	if err := app.Listen("0.0.0.0:3000"); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
